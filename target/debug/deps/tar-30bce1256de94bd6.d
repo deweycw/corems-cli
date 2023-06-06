@@ -1,0 +1,12 @@
+/Users/christiandewey/Code/docker-rust/target/debug/deps/tar-30bce1256de94bd6.rmeta: /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/lib.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/archive.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/builder.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/entry.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/entry_type.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/error.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/header.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/pax.rs
+
+/Users/christiandewey/Code/docker-rust/target/debug/deps/tar-30bce1256de94bd6.d: /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/lib.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/archive.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/builder.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/entry.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/entry_type.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/error.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/header.rs /Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/pax.rs
+
+/Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/lib.rs:
+/Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/archive.rs:
+/Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/builder.rs:
+/Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/entry.rs:
+/Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/entry_type.rs:
+/Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/error.rs:
+/Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/header.rs:
+/Users/christiandewey/.cargo/registry/src/github.com-1ecc6299db9ec823/tar-0.4.38/src/pax.rs:
