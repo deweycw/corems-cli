@@ -39,6 +39,19 @@ pub type Elements= HashMap<ElementIndex, ElementValue>;
 
 
 
+#[derive(PartialEq, Eq, Hash)]
+pub struct CalIndex{
+    pub i: i32,
+}
+#[derive(Debug)]
+pub struct CalValue{
+    pub py_param: String,
+    pub value: String,
+}
+pub type Calibtration = HashMap<CalIndex, CalValue>;
+
+
+
 #[allow(unused_macros)]
 macro_rules! rt_exec {
     ($docker_call:expr, $assertions:expr) => {{

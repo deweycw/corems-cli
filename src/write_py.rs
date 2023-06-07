@@ -47,37 +47,37 @@ pub fn header() {
  }
 
 pub fn global_params<'a>(global_params_hash:Parameters<'a>) {
-    let preamble = "MSParameters.molecular_search.";
+    let preamble = "\tMSParameters.molecular_search.";
     let mut file = OpenOptions::new()
         .append(true)
         .open("./corems_input.py")
         .unwrap();
    
     writeln!(&file,"\n");
-    writeln!(&file,"#global search settings");
+    writeln!(&file,"\t#global search settings");
     _write_to_file(preamble,global_params_hash);
 }
 
 pub fn search_params<'a>(search_params_hash:Parameters<'a>) {
-    let preamble = "MSParameters.molecular_search.";
+    let preamble = "\t\tMSParameters.molecular_search.";
     let mut file = OpenOptions::new()
         .append(true)
         .open("./corems_input.py")
         .unwrap();
    
     writeln!(&file,"\n");
-    writeln!(&file,"#first search settings");
+    writeln!(&file,"\t\t#first search settings");
     _write_to_file(preamble,search_params_hash);
 }
 
 pub fn elements(elements_hash:Elements) {
     
-    let preamble = "MSParameters.molecular_search.";
+    let preamble = "\t\tMSParameters.molecular_search.";
     let mut file = OpenOptions::new()
         .append(true)
         .open("./corems_input.py")
         .unwrap();
-    writeln!(&file,"#first search elements");
+    writeln!(&file,"\t\t#first search elements");
 
     let size = elements_hash.keys().len();
     let nelements = size as i32;
@@ -100,6 +100,80 @@ pub fn elements(elements_hash:Elements) {
 
 }
 
-pub fn assign_func(elements_hash:HashMap<String,String>) {
-    let preamble = "def assign_formula(esifile, times, cal_ppm_threshold=(-1,1), refmasslist=None):\nMSParameters.mass_spectrum.threshold_method = 'signal_noise'\nMSParameters.mass_spectrum.s2n_threshold = 3\nparser = rawFileReader.ImportMassSpectraThermoMSFileReader(esifile)\n";
+pub fn assign_func_header() {
+    let preamble = "\n\ndef assign_formula(esifile, times, cal_ppm_threshold=(-1,1), refmasslist=None):";
+    
+    let mut file = OpenOptions::new()
+        .append(true)
+        .open("./corems_input.py")
+        .unwrap();
+    
+    let mut newline = preamble.to_owned();
+
+    writeln!(&file,"{newline}");
+}
+
+
+pub fn assign_chunk() {
+    let preamble = "\n\n\tparser = rawFileReader.ImportMassSpectraThermoMSFileReader(esifile)\n\n\ttic=parser.get_tic(ms_type='MS')[0]\n\ttic_df=pd.DataFrame({'time': tic.time,'scan': tic.scans})\n\tresults = []\n\n\tfor timestart in times:\n\n\t\tscans=tic_df[tic_df.time.between(timestart,timestart+interval)].scan.tolist()\n\t\tmass_spectrum = parser.get_average_mass_spectrum_by_scanlist(scans) ";
+    
+    let mut file = OpenOptions::new()
+        .append(true)
+        .open("./corems_input.py")
+        .unwrap();
+    
+    let mut newline = preamble.to_owned();
+
+    writeln!(&file,"{newline}");
+}
+
+pub fn search_chunk() {
+
+    let preamble = "\n\t\tSearchMolecularFormulas(mass_spectrum,first_hit=False).run_worker_mass_spectrum()\n\n\t\tmass_spectrum.percentile_assigned(report_error=True)\n\t\tassignments=mass_spectrum.to_dataframe()\n\t\tassignments['Time']=timestart\n\t\tresults.append(assignments)";
+
+    let mut file = OpenOptions::new()
+        .append(true)
+        .open("./corems_input.py")
+        .unwrap();
+
+    let mut newline = preamble.to_owned();
+
+    writeln!(&file,"{newline}");
+}
+
+pub fn search_return() {
+
+    let preamble = "\n\n\tresults=pd.concat(results,ignore_index=True)\n\n\treturn(results)";
+
+    let mut file = OpenOptions::new()
+        .append(true)
+        .open("./corems_input.py")
+        .unwrap();
+
+    let mut newline = preamble.to_owned();
+
+    writeln!(&file,"{newline}");
+}
+
+
+pub fn calibration_chunk() {
+
+
+}
+
+
+
+
+pub fn py_main() {
+
+    let func_body = "\n\n\nif __name__ -- '__main__':\n\n\tdata_dir = '/CoreMS/usrdata/'\n\tmzref = data_dir + 'mz_ref.db'\n\n\tinterval = 2\n\ttime_range = [7,11]\n\n\tresults = []\n\ttimes = list(range(time_range[0],time_range[1],interval))\n\n\tflist = os.listdir(data_dir)\n\tf_raw = [f for f in flist if '.raw' in f]\n\tos.chdir(data_dir)\n\ti=1\n\n\tfor i in f_raw:\n\t\toutput = assign_formula(esifile = f, times = times, cal_ppm_threshold=(-1,1), refmasslist = mzref)\n\t\toutput['file'] = f\n\t\tresults.append(output)\n\t\ti = i + 1 \n\n\tdf = pd.concat(results)\n\tdf.to_csv(data_dir+fname)";
+
+    let mut file = OpenOptions::new()
+        .append(true)
+        .open("./corems_input.py")
+        .unwrap();
+
+    let mut newline = func_body.to_owned();
+
+    writeln!(&file,"{newline}");
 }

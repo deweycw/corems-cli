@@ -24,28 +24,82 @@ import corems.lc_icpms_ftms.calc.lc_icrms_helpers as lcmsfns
 os.chdir('/CoreMS/usrdata')
 
 
-#global search settings
-MSParameters.molecular_search.error_method = None
-MSParameters.molecular_search.min_ppm_error = -0.25
-MSParameters.molecular_search.max_ppm_error = 0.25
-MSParameters.molecular_search.threshold_method = 'signal_noise'
-MSParameters.molecular_search.s2n_threshold = 3
-MSParameters.molecular_search.score_method = 'prob_score'
-MSParameters.molecular_search.output_score_method = 'prob_score'
+def assign_formula(esifile, times, cal_ppm_threshold=(-1,1), refmasslist=None):
 
 
-#first search settings
-MSParameters.molecular_search.min_dbe = 0
-MSParameters.molecular_search.max_dbe = 20
-MSParameters.molecular_search.ion_charge = 1
-MSParameters.molecular_search.isRadical = False
-MSParameters.molecular_search.isAdduct = True
-MSParameters.molecular_search.isProtonated = True
-#first search elements
-MSParameters.molecular_search.usedAtoms['C'] = (1,50)
-MSParameters.molecular_search.usedAtoms['H'] = (4,100)
-MSParameters.molecular_search.usedAtoms['O'] = (0,20)
-MSParameters.molecular_search.usedAtoms['N'] = (0,4)
-MSParameters.molecular_search.usedAtoms['S'] = (0,1)
-MSParameters.molecular_search.usedAtoms['Si'] = (0,10)
-MSParameters.molecular_search.usedAtoms['Cu'] = (0,1)
+	#global search settings
+	MSParameters.molecular_search.error_method = None
+	MSParameters.molecular_search.min_ppm_error = -0.25
+	MSParameters.molecular_search.max_ppm_error = 0.25
+	MSParameters.molecular_search.threshold_method = 'signal_noise'
+	MSParameters.molecular_search.s2n_threshold = 3
+	MSParameters.molecular_search.score_method = 'prob_score'
+	MSParameters.molecular_search.output_score_method = 'prob_score'
+
+
+	parser = rawFileReader.ImportMassSpectraThermoMSFileReader(esifile)
+
+	tic=parser.get_tic(ms_type='MS')[0]
+	tic_df=pd.DataFrame({'time': tic.time,'scan': tic.scans})
+	results = []
+
+	for timestart in times:
+
+		scans=tic_df[tic_df.time.between(timestart,timestart+interval)].scan.tolist()
+		mass_spectrum = parser.get_average_mass_spectrum_by_scanlist(scans) 
+
+
+		#first search settings
+		MSParameters.molecular_search.min_dbe = 0
+		MSParameters.molecular_search.max_dbe = 20
+		MSParameters.molecular_search.ion_charge = 1
+		MSParameters.molecular_search.isRadical = False
+		MSParameters.molecular_search.isAdduct = True
+		MSParameters.molecular_search.isProtonated = True
+		#first search elements
+		MSParameters.molecular_search.usedAtoms['C'] = (1,50)
+		MSParameters.molecular_search.usedAtoms['H'] = (4,100)
+		MSParameters.molecular_search.usedAtoms['O'] = (0,20)
+		MSParameters.molecular_search.usedAtoms['N'] = (0,4)
+		MSParameters.molecular_search.usedAtoms['S'] = (0,1)
+		MSParameters.molecular_search.usedAtoms['Si'] = (0,10)
+		MSParameters.molecular_search.usedAtoms['Cu'] = (0,1)
+
+		SearchMolecularFormulas(mass_spectrum,first_hit=False).run_worker_mass_spectrum()
+
+		mass_spectrum.percentile_assigned(report_error=True)
+		assignments=mass_spectrum.to_dataframe()
+		assignments['Time']=timestart
+		results.append(assignments)
+
+
+	results=pd.concat(results,ignore_index=True)
+
+	return(results)
+
+
+
+if __name__ -- '__main__':
+
+	data_dir = '/CoreMS/usrdata/'
+	mzref = data_dir + 'mz_ref.db'
+
+	interval = 2
+	time_range = [7,11]
+
+	results = []
+	times = list(range(time_range[0],time_range[1],interval))
+
+	flist = os.listdir(data_dir)
+	f_raw = [f for f in flist if '.raw' in f]
+	os.chdir(data_dir)
+	i=1
+
+	for i in f_raw:
+		output = assign_formula(esifile = f, times = times, cal_ppm_threshold=(-1,1), refmasslist = mzref)
+		output['file'] = f
+		results.append(output)
+		i = i + 1 
+
+	df = pd.concat(results)
+	df.to_csv(data_dir+fname)
