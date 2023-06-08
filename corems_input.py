@@ -53,7 +53,7 @@ def assign_formula(esifile, times, cal_ppm_threshold=(-1,1), refmasslist=None):
 		MSParameters.molecular_search.max_dbe = 20
 		MSParameters.molecular_search.ion_charge = 1
 		MSParameters.molecular_search.isRadical = False
-		MSParameters.molecular_search.isAdduct = True
+		MSParameters.molecular_search.isAdduct = False
 		MSParameters.molecular_search.isProtonated = True
 
 		# calibration settings
@@ -75,8 +75,8 @@ def assign_formula(esifile, times, cal_ppm_threshold=(-1,1), refmasslist=None):
 
 		#next search settings
 		MSParameters.molecular_search.min_dbe = 0
-		MSParameters.molecular_search.max_dbe = 20
-		MSParameters.molecular_search.ion_charge = 1
+		MSParameters.molecular_search.max_dbe = 40
+		MSParameters.molecular_search.ion_charge = 2
 		MSParameters.molecular_search.isRadical = False
 		MSParameters.molecular_search.isAdduct = True
 		MSParameters.molecular_search.isProtonated = True
@@ -88,27 +88,7 @@ def assign_formula(esifile, times, cal_ppm_threshold=(-1,1), refmasslist=None):
 		MSParameters.molecular_search.usedAtoms['N'] = (0,4)
 		MSParameters.molecular_search.usedAtoms['S'] = (0,1)
 		MSParameters.molecular_search.usedAtoms['Si'] = (0,10)
-		MSParameters.molecular_search.usedAtoms['Cu'] = (0,1)
-
-		SearchMolecularFormulas(mass_spectrum,first_hit = True).run_worker_mass_spectrum()
-
-
-		#next search settings
-		MSParameters.molecular_search.min_dbe = 0
-		MSParameters.molecular_search.max_dbe = 200
-		MSParameters.molecular_search.ion_charge = 1
-		MSParameters.molecular_search.isRadical = False
-		MSParameters.molecular_search.isAdduct = True
-		MSParameters.molecular_search.isProtonated = True
-
-		#next search elements
-		MSParameters.molecular_search.usedAtoms['C'] = (1,50)
-		MSParameters.molecular_search.usedAtoms['H'] = (4,100)
-		MSParameters.molecular_search.usedAtoms['O'] = (0,20)
-		MSParameters.molecular_search.usedAtoms['N'] = (0,4)
-		MSParameters.molecular_search.usedAtoms['S'] = (0,1)
-		MSParameters.molecular_search.usedAtoms['Si'] = (0,10)
-		MSParameters.molecular_search.usedAtoms['Cu'] = (0,1)
+		MSParameters.molecular_search.usedAtoms['Cu'] = (0,10)
 
 		SearchMolecularFormulas(mass_spectrum,first_hit = True).run_worker_mass_spectrum()
 

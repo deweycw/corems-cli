@@ -202,11 +202,13 @@ fn find_cards<'a>(content:&'a String) {
     
     let mut global_params: Parameters<'a> = read_global_settings_card(&content);
     let mut assign_params_hash = read_search_card(&content);
-    println!("{:?}",assign_params_hash.keys());
-    let first_search = assign_params_hash.get(&2).unwrap();
+    println!("{:?}",assign_params_hash.get(&1).unwrap());
+    println!("yes");
+    let first_search = assign_params_hash.get(&1).unwrap();
+    println!("{:?}", &first_search);
     let first_search_params = &first_search.params;
     let first_elements = &first_search.elements;
-    println!("{:?}", &first_search_params);
+    
     let cal_params = read_calibration_card(&content);
     let time_params = read_time_binning_card(&content);
 
@@ -353,17 +355,17 @@ struct AssignParams<'a>{
     pub elements: common::Elements,
 }
 
-fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'_>> {
+fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>> {
 
     let mut first_assign = true;
     let card_split: Vec<&str> = content.split("SEARCH").collect();
     let assign_card_grouped = card_split[1];
 
     let assign_cards: Vec<&str> = assign_card_grouped.split("ASSIGNMENT").collect();
-    println!("{:?}",assign_cards.len());
+    println!("{:?}",assign_cards);
 
     
-    fn get_assign_card_vals(card:&str) ->AssignParams {
+    fn get_assign_card_vals<'a>(card:&'a str) ->AssignParams<'a> {
         let mut read_elements_card = false;
         let mut read_filters_card = true;
         let mut min_dbe = "0";
@@ -377,16 +379,19 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'_>> {
         let mut hc_filter = "2.0";
         let mut element_vec = Vec::new();
         let mut filters_vec = Vec::new();
+        let mut element_return = false;
+        let mut param_return = false;
 
         for line in card.lines() {
             let line_vec: Vec<&str> = line.split_whitespace().collect();
             if line_vec.len() == 0 {
                 continue;
+            } else if line.contains("\n") {
+                continue;
             } else {    
-        
                 if line.contains("ELEMENTS") {
-                    println!("tests");
                     read_elements_card = true;
+                    element_return = true;
                 }
                 if line.contains("FILTERS") {
                     read_filters_card = true;
@@ -404,6 +409,7 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'_>> {
                     }
                 }
                 if line.contains("ION_CHARGE") {
+                    param_return = false;
                     let vec: Vec<&str> = line.split_whitespace().collect();
                     let temp = vec[1];
                     let str_charge = temp.to_string();
@@ -416,7 +422,22 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'_>> {
                     }
                 }
                 if line.contains("PROTONATED") {
-                    is_protonated = "True";
+                    let vec: Vec<&str> = line.split_whitespace().collect();
+                    let mut protonated_string = "True";
+                    if vec.len() == 1 {
+                        is_protonated = "True";
+                    } else{
+                        protonated_string = vec[1];
+                    }
+                    
+                    if protonated_string.contains("True"){
+                        is_protonated = "True";
+                    } else if protonated_string.contains("False"){
+                        is_protonated = "False"
+                    } else {
+                        println!("PROTONATED requires either True or False. Default value (True) will be used.");
+                        is_protonated = "True";
+                    }
                     ion_type_selected = true;
                 }
                 if line.contains("RADICAL") {
@@ -427,12 +448,16 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'_>> {
                     is_adduct = "True";
                     ion_type_selected = true;
                 }
+
                 if read_elements_card {
+                    //println!("ppp");
                     let vec_el: Vec<&str> = card.split("ELEMENTS").collect();
                     let temp = vec_el[1];
+                    //println!("{:?}", temp);
                     let elements_grp = temp.to_string();
                     for l in elements_grp.lines() {
                         let vec_el_2: Vec<&str> = l.split_whitespace().collect();
+                        //println!("{:?}", vec_el_2);
                         if vec_el_2.len() < 2 && vec_el_2.len() > 1 {
                             println!("Max and min number of each element must be specified!");
                             continue;
@@ -449,10 +474,10 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'_>> {
                             read_elements_card = false;
                             break;
                         } else {
+                            println!("kjhl");
                             continue;
                         }
                     }
-                    
                 }
                 
                 if read_filters_card {
@@ -499,6 +524,9 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'_>> {
         let mut n: i32 = 0;
 
         for e in element_vec {
+            //println!{"test1"};
+            //println!{"{:?}",e};
+            //println!{"test2"};
             let mut min = e[1].to_string();
             let mut max = e[2].to_string();
             let mut element_range = "(".to_string();
@@ -519,17 +547,18 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'_>> {
                 symbol: py_element,
                 range: element_range,
             };
-
+            //println!("{:?}",element_index);
             elements_hash.insert(element_index, element_value);
             n = n + 1;
-            
+        
         }
-
+        //println!("mmmmtttt");
+        //println!("{:?}",elements_hash);
+        //println!("tttttt");
         let param_set = AssignParams {
             params: search_params_hash,
             elements: elements_hash,
         };       
-        
         return param_set
     }
     
@@ -537,10 +566,14 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'_>> {
 
     let mut k: i32 = 1;
     for card in assign_cards {
+        println!("{:?}",card);
+        let card_vec: Vec<&str> = card.split_whitespace().collect();
 
-        let card_vals = get_assign_card_vals(card);
-        param_hash.insert(k, card_vals);
-        k = k + 1;
+        if card_vec.len() > 1{
+            let card_vals = get_assign_card_vals(card);
+            param_hash.insert(k, card_vals);
+            k = k + 1;
+        }
     };
 
     return param_hash;
