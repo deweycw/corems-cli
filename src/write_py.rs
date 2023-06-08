@@ -77,7 +77,7 @@ pub fn elements(elements_hash:Elements) {
         .append(true)
         .open("./corems_input.py")
         .unwrap();
-    writeln!(&file,"\t\t#first search elements");
+    writeln!(&file,"\n\t\t#first search elements");
 
     let size = elements_hash.keys().len();
     let nelements = size as i32;
@@ -115,7 +115,7 @@ pub fn assign_func_header() {
 
 
 pub fn assign_chunk() {
-    let preamble = "\n\n\tparser = rawFileReader.ImportMassSpectraThermoMSFileReader(esifile)\n\n\ttic=parser.get_tic(ms_type='MS')[0]\n\ttic_df=pd.DataFrame({'time': tic.time,'scan': tic.scans})\n\tresults = []\n\n\tfor timestart in times:\n\n\t\tscans=tic_df[tic_df.time.between(timestart,timestart+interval)].scan.tolist()\n\t\tmass_spectrum = parser.get_average_mass_spectrum_by_scanlist(scans) ";
+    let preamble = "\n\tparser = rawFileReader.ImportMassSpectraThermoMSFileReader(esifile)\n\n\ttic=parser.get_tic(ms_type='MS')[0]\n\ttic_df=pd.DataFrame({'time': tic.time,'scan': tic.scans})\n\tresults = []\n\n\tfor timestart in times:\n\n\t\tscans=tic_df[tic_df.time.between(timestart,timestart+interval)].scan.tolist()\n\t\tmass_spectrum = parser.get_average_mass_spectrum_by_scanlist(scans) ";
     
     let mut file = OpenOptions::new()
         .append(true)
@@ -156,24 +156,49 @@ pub fn search_return() {
 }
 
 
-pub fn calibration_chunk() {
+pub fn calibration_chunk(cal_params_hash: HashMap<&str, String>) {
+    let preamble = "\n\t\t# calibration settings\n\t\tmass_spectrum.settings.min_calib_ppm_error = -10\n\t\tmass_spectrum.settings.max_calib_ppm_error = 10\n\t\tcalfn = MzDomainCalibration(mass_spectrum, ";
+    
+    let mut file = OpenOptions::new()
+        .append(true)
+        .open("./corems_input.py")
+        .unwrap();
 
+    let mut newline = preamble.to_owned();
+    
+    let string_holder = cal_params_hash.get("ref_mass_list").unwrap();
+    newline.push_str(string_holder);
+    newline.push_str(")");
+    writeln!(&file,"{newline}");
 
 }
 
 
+pub fn py_main(time_params_hash:HashMap<&str,&str>) {
 
+    let func_body = "\n\n\nif __name__ -- '__main__':\n\n\tdata_dir = '/CoreMS/usrdata/'\n\n\tinterval = ";
 
-pub fn py_main() {
+    let mut newline = func_body.to_owned();
+    
+    let interval = time_params_hash.get("interval").unwrap();
+    newline.push_str(interval);
 
-    let func_body = "\n\n\nif __name__ -- '__main__':\n\n\tdata_dir = '/CoreMS/usrdata/'\n\tmzref = data_dir + 'mz_ref.db'\n\n\tinterval = 2\n\ttime_range = [7,11]\n\n\tresults = []\n\ttimes = list(range(time_range[0],time_range[1],interval))\n\n\tflist = os.listdir(data_dir)\n\tf_raw = [f for f in flist if '.raw' in f]\n\tos.chdir(data_dir)\n\ti=1\n\n\tfor i in f_raw:\n\t\toutput = assign_formula(esifile = f, times = times, cal_ppm_threshold=(-1,1), refmasslist = mzref)\n\t\toutput['file'] = f\n\t\tresults.append(output)\n\t\ti = i + 1 \n\n\tdf = pd.concat(results)\n\tdf.to_csv(data_dir+fname)";
+    let time_min = time_params_hash.get("time_min").unwrap();
+    newline.push_str("\n\ttime_min = ");
+    newline.push_str(time_min);
+
+    let time_max = time_params_hash.get("time_max").unwrap();
+    newline.push_str("\n\ttime_max = ");
+    newline.push_str(time_max);
+
+    newline.push_str("\n\ttimes = list(range(time_min,time_max,interval))\n\n\tflist = os.listdir(data_dir)\n\tf_raw = [f for f in flist if '.raw' in f]\n\tos.chdir(data_dir)\n\ti=1\n\n\tfor i in f_raw:\n\t\toutput = assign_formula(esifile = f, times = times)\n\t\toutput['file'] = f\n\t\tresults.append(output)\n\t\ti = i + 1 \n\n\tdf = pd.concat(results)\n\tdf.to_csv(data_dir+fname)");
 
     let mut file = OpenOptions::new()
         .append(true)
         .open("./corems_input.py")
         .unwrap();
 
-    let mut newline = func_body.to_owned();
+    
 
     writeln!(&file,"{newline}");
 }

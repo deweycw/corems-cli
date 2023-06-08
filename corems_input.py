@@ -32,10 +32,9 @@ def assign_formula(esifile, times, cal_ppm_threshold=(-1,1), refmasslist=None):
 	MSParameters.molecular_search.min_ppm_error = -0.25
 	MSParameters.molecular_search.max_ppm_error = 0.25
 	MSParameters.molecular_search.threshold_method = 'signal_noise'
-	MSParameters.molecular_search.s2n_threshold = 3
+	MSParameters.molecular_search.s2n_threshold = 5
 	MSParameters.molecular_search.score_method = 'prob_score'
 	MSParameters.molecular_search.output_score_method = 'prob_score'
-
 
 	parser = rawFileReader.ImportMassSpectraThermoMSFileReader(esifile)
 
@@ -56,7 +55,20 @@ def assign_formula(esifile, times, cal_ppm_threshold=(-1,1), refmasslist=None):
 		MSParameters.molecular_search.isRadical = False
 		MSParameters.molecular_search.isAdduct = True
 		MSParameters.molecular_search.isProtonated = True
+
+		# calibration settings
+		mass_spectrum.settings.min_calib_ppm_error = -10
+		mass_spectrum.settings.max_calib_ppm_error = 10
+		calfn = MzDomainCalibration(mass_spectrum, 'mz_ref.db')
+
 		#first search elements
+		MSParameters.molecular_search.usedAtoms['C'] = (1,50)
+		MSParameters.molecular_search.usedAtoms['H'] = (4,100)
+		MSParameters.molecular_search.usedAtoms['O'] = (0,20)
+		MSParameters.molecular_search.usedAtoms['N'] = (0,4)
+		MSParameters.molecular_search.usedAtoms['S'] = (0,1)
+		MSParameters.molecular_search.usedAtoms['Si'] = (0,10)
+		MSParameters.molecular_search.usedAtoms['Cu'] = (0,1)
 		MSParameters.molecular_search.usedAtoms['C'] = (1,50)
 		MSParameters.molecular_search.usedAtoms['H'] = (4,100)
 		MSParameters.molecular_search.usedAtoms['O'] = (0,20)
@@ -82,13 +94,11 @@ def assign_formula(esifile, times, cal_ppm_threshold=(-1,1), refmasslist=None):
 if __name__ -- '__main__':
 
 	data_dir = '/CoreMS/usrdata/'
-	mzref = data_dir + 'mz_ref.db'
 
 	interval = 2
-	time_range = [7,11]
-
-	results = []
-	times = list(range(time_range[0],time_range[1],interval))
+	time_min = 0
+	time_max = 28
+	times = list(range(time_min,time_max,interval))
 
 	flist = os.listdir(data_dir)
 	f_raw = [f for f in flist if '.raw' in f]
@@ -96,7 +106,7 @@ if __name__ -- '__main__':
 	i=1
 
 	for i in f_raw:
-		output = assign_formula(esifile = f, times = times, cal_ppm_threshold=(-1,1), refmasslist = mzref)
+		output = assign_formula(esifile = f, times = times)
 		output['file'] = f
 		results.append(output)
 		i = i + 1 

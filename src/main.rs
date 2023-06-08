@@ -204,17 +204,20 @@ fn find_cards<'a>(content:&'a String) {
     let mut search_tuple = read_search_card(&content);
     let search_params = search_tuple.0;
     let elements = search_tuple.1;
+    let cal_params = read_calibration_card(&content);
+    let time_params = read_time_binning_card(&content);
 
     write_py::header();
     write_py::assign_func_header();
     write_py::global_params(global_params);
     write_py::assign_chunk();
     write_py::search_params(search_params);
+    write_py::calibration_chunk(cal_params);
     write_py::elements(elements);
     let first_hit: &str = "yes";
     write_py::search_chunk();
     write_py::search_return();
-    write_py::py_main();
+    write_py::py_main(time_params);
 }
 
 
@@ -304,11 +307,15 @@ fn read_calibration_card(content:&String) -> HashMap<&str,String> {
     cal_range.push_str(&max);
     cal_range.push_str(")");
 
+    let mut calfile_bldr: String = "'".to_owned();
+
+    calfile_bldr.push_str(calfile);
+    calfile_bldr.push_str("'");
 
     let mut param_vec = vec![
         ("calib_ppm_error_threshold",cal_range),
         ("calib_snr_thrshold",cal_snr_threshold),
-        ("refmasslist",calfile.to_string()),
+        ("ref_mass_list",calfile_bldr),
     ];
     
 
@@ -327,8 +334,8 @@ fn read_search_card<'a>(content:&'a String) -> (Parameters<'a>,Elements) {
     let card_split: Vec<&str> = content.split("SEARCH").collect();
     let assign_card_grouped = card_split[1];
 
-    let assign_cards: Vec<&str> = assign_card_grouped.split("ASSIGN").collect();
-    
+    let assign_cards: Vec<&str> = assign_card_grouped.split("ASSIGNMENT").collect();
+    println!("{:?}",assign_cards.len());
     let mut read_elements_card = false;
     let mut read_filters_card = false;
 
@@ -337,12 +344,16 @@ fn read_search_card<'a>(content:&'a String) -> (Parameters<'a>,Elements) {
     let mut ion_charge = "1";
     let mut ion_type_selected = false;
     let mut is_radical = "False";
-    let mut is_protonated = "True";
+    let mut is_protonated = "False";
     let mut is_adduct = "False";
     let mut oc_filter = "1.0";
     let mut hc_filter = "2.0";
     let mut element_vec = Vec::new();
     let mut filters_vec = Vec::new();
+
+    if assign_cards.len() >2 {
+        multiple_assignments = true;
+    }
 
     for card in assign_cards {
         for line in card.lines() {
@@ -496,7 +507,7 @@ fn read_search_card<'a>(content:&'a String) -> (Parameters<'a>,Elements) {
     return (search_params_hash, elements_hash);
 }
 
-fn read_time_binning_card(content:&String) {
+fn read_time_binning_card(content:&String) -> HashMap<&str,&str> {
     
     let mut interval = "2";
     let mut time_min = "0";
@@ -526,6 +537,18 @@ fn read_time_binning_card(content:&String) {
             }
         }
     }
+
+
+    let mut param_vec = vec![
+        ("time_min",time_min),
+        ("time_max",time_max),
+        ("interval",interval),
+    ];
+    
+    let mut time_params_hash: HashMap<_, _> = param_vec.into_iter().collect();
+
+    return time_params_hash;
+
 }
 
 
