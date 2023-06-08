@@ -441,23 +441,53 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>> {
                     ion_type_selected = true;
                 }
                 if line.contains("RADICAL") {
-                    is_radical = "True";
+                    let vec: Vec<&str> = line.split_whitespace().collect();
+                    let mut radical_string = "True";
+                    if vec.len() == 1 {
+                        is_radical = "True";
+                    } else{
+                        radical_string = vec[1];
+                    }
+                    
+                    if radical_string.contains("True"){
+                        is_radical = "True";
+                    } else if radical_string.contains("False"){
+                        is_radical = "False"
+                    } else {
+                        println!("RADICAL requires either True or False. Default value (True) will be used.");
+                        is_radical = "True";
+                    }
                     ion_type_selected = true;
                 }
                 if line.contains("ADDUCT") {
+                    let vec: Vec<&str> = line.split_whitespace().collect();
+                    let mut adduct_string = "True";
+                    if vec.len() == 1 {
+                        is_adduct = "True";
+                    } else{
+                        adduct_string = vec[1];
+                    }
+                    
+                    if adduct_string.contains("True"){
+                        is_adduct = "True";
+                    } else if adduct_string.contains("False"){
+                        is_adduct = "False"
+                    } else {
+                        println!("ADDUCT requires either True or False. Default value (True) will be used.");
+                        is_adduct = "True";
+                    }
                     is_adduct = "True";
-                    ion_type_selected = true;
                 }
 
                 if read_elements_card {
-                    //println!("ppp");
+                    
                     let vec_el: Vec<&str> = card.split("ELEMENTS").collect();
                     let temp = vec_el[1];
-                    //println!("{:?}", temp);
+                    
                     let elements_grp = temp.to_string();
                     for l in elements_grp.lines() {
                         let vec_el_2: Vec<&str> = l.split_whitespace().collect();
-                        //println!("{:?}", vec_el_2);
+                        
                         if vec_el_2.len() < 2 && vec_el_2.len() > 1 {
                             println!("Max and min number of each element must be specified!");
                             continue;
@@ -524,9 +554,6 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>> {
         let mut n: i32 = 0;
 
         for e in element_vec {
-            //println!{"test1"};
-            //println!{"{:?}",e};
-            //println!{"test2"};
             let mut min = e[1].to_string();
             let mut max = e[2].to_string();
             let mut element_range = "(".to_string();
@@ -547,14 +574,11 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>> {
                 symbol: py_element,
                 range: element_range,
             };
-            //println!("{:?}",element_index);
             elements_hash.insert(element_index, element_value);
             n = n + 1;
         
         }
-        //println!("mmmmtttt");
-        //println!("{:?}",elements_hash);
-        //println!("tttttt");
+
         let param_set = AssignParams {
             params: search_params_hash,
             elements: elements_hash,
