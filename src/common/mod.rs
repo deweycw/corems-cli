@@ -12,7 +12,7 @@ use bollard::Docker;
 
 use std::collections::HashMap;
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Debug)]
 pub struct ParamIndex{
     pub i: i32,
 }
@@ -25,7 +25,7 @@ pub struct ParamValue<'a>{
 pub type Parameters<'a> = HashMap<ParamIndex, ParamValue<'a>,>;
 
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Debug)]
 pub struct ElementIndex{
     pub i: i32,
 }

@@ -201,20 +201,39 @@ fn find_cards<'a>(content:&'a String) {
 
     
     let mut global_params: Parameters<'a> = read_global_settings_card(&content);
-    let mut search_tuple = read_search_card(&content);
-    let search_params = search_tuple.0;
-    let elements = search_tuple.1;
+    let mut assign_params_hash = read_search_card(&content);
+    println!("{:?}",assign_params_hash.keys());
+    let first_search = assign_params_hash.get(&2).unwrap();
+    let first_search_params = &first_search.params;
+    let first_elements = &first_search.elements;
+    println!("{:?}", &first_search_params);
     let cal_params = read_calibration_card(&content);
     let time_params = read_time_binning_card(&content);
+
+    let num_assign = assign_params_hash.keys().len();
 
     write_py::header();
     write_py::assign_func_header();
     write_py::global_params(global_params);
     write_py::assign_chunk();
-    write_py::search_params(search_params);
+    write_py::first_search_params(first_search_params);
     write_py::calibration_chunk(cal_params);
-    write_py::elements(elements);
-    let first_hit: &str = "yes";
+    write_py::first_elements(first_elements);
+    let mut first_hit:&str = "False";
+    write_py::run_search(&first_hit);
+    if num_assign > 1 {
+
+        let it: i32 = num_assign as i32;
+        for a in 2..it {
+            first_hit = "True";
+            let search = assign_params_hash.get(&a).unwrap();
+            let search_params = &search.params;
+            let elements = &search.elements;
+            write_py::next_search_params(search_params);
+            write_py::next_elements(elements); 
+            write_py::run_search(&first_hit); 
+        } 
+    }
     write_py::search_chunk();
     write_py::search_return();
     write_py::py_main(time_params);
@@ -328,40 +347,45 @@ fn read_calibration_card(content:&String) -> HashMap<&str,String> {
 
 }
 
-fn read_search_card<'a>(content:&'a String) -> (Parameters<'a>,Elements) {
+#[derive(Debug)]
+struct AssignParams<'a>{
+    pub params: common::Parameters<'a>,
+    pub elements: common::Elements,
+}
 
-    let mut multiple_assignments = false;
+fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'_>> {
+
+    let mut first_assign = true;
     let card_split: Vec<&str> = content.split("SEARCH").collect();
     let assign_card_grouped = card_split[1];
 
     let assign_cards: Vec<&str> = assign_card_grouped.split("ASSIGNMENT").collect();
     println!("{:?}",assign_cards.len());
-    let mut read_elements_card = false;
-    let mut read_filters_card = false;
 
-    let mut min_dbe = "0";
-    let mut max_dbe = "20";
-    let mut ion_charge = "1";
-    let mut ion_type_selected = false;
-    let mut is_radical = "False";
-    let mut is_protonated = "False";
-    let mut is_adduct = "False";
-    let mut oc_filter = "1.0";
-    let mut hc_filter = "2.0";
-    let mut element_vec = Vec::new();
-    let mut filters_vec = Vec::new();
+    
+    fn get_assign_card_vals(card:&str) ->AssignParams {
+        let mut read_elements_card = false;
+        let mut read_filters_card = true;
+        let mut min_dbe = "0";
+        let mut max_dbe = "20";
+        let mut ion_charge = "1";
+        let mut ion_type_selected = false;
+        let mut is_radical = "False";
+        let mut is_protonated = "False";
+        let mut is_adduct = "False";
+        let mut oc_filter = "1.0";
+        let mut hc_filter = "2.0";
+        let mut element_vec = Vec::new();
+        let mut filters_vec = Vec::new();
 
-    if assign_cards.len() >2 {
-        multiple_assignments = true;
-    }
-
-    for card in assign_cards {
         for line in card.lines() {
             let line_vec: Vec<&str> = line.split_whitespace().collect();
             if line_vec.len() == 0 {
                 continue;
-            } else {            
+            } else {    
+        
                 if line.contains("ELEMENTS") {
+                    println!("tests");
                     read_elements_card = true;
                 }
                 if line.contains("FILTERS") {
@@ -458,53 +482,68 @@ fn read_search_card<'a>(content:&'a String) -> (Parameters<'a>,Elements) {
                 }
             }
         }
+
+        let mut param_vec = vec![
+            ("min_dbe",min_dbe),
+            ("max_dbe",max_dbe),
+            ("ion_charge",ion_charge),
+            ("isRadical",is_radical),
+            ("isAdduct",is_adduct),
+            ("isProtonated",is_protonated),
+        ];
+
+        let search_params_hash = make_param_hash(&param_vec);
+
+        let mut elements_hash: common::Elements = HashMap::new();
+
+        let mut n: i32 = 0;
+
+        for e in element_vec {
+            let mut min = e[1].to_string();
+            let mut max = e[2].to_string();
+            let mut element_range = "(".to_string();
+            element_range.push_str(&min);
+            element_range.push_str(",");
+            element_range.push_str(&max);
+            element_range.push_str(")");
+
+            let mut py_element = "usedAtoms['".to_string();
+            py_element.push_str(&e[0]);
+            py_element.push_str("']");
+
+            let element_index = ElementIndex {
+                i: n,
+            };            
+
+            let element_value = ElementValue {
+                symbol: py_element,
+                range: element_range,
+            };
+
+            elements_hash.insert(element_index, element_value);
+            n = n + 1;
+            
+        }
+
+        let param_set = AssignParams {
+            params: search_params_hash,
+            elements: elements_hash,
+        };       
+        
+        return param_set
     }
-    let mut param_vec = vec![
-        ("min_dbe",min_dbe),
-        ("max_dbe",max_dbe),
-        ("ion_charge",ion_charge),
-        ("isRadical",is_radical),
-        ("isAdduct",is_adduct),
-        ("isProtonated",is_protonated),
-    ];
+    
+    let mut param_hash: HashMap<i32,AssignParams> = HashMap::new();
 
+    let mut k: i32 = 1;
+    for card in assign_cards {
 
-    let search_params_hash = make_param_hash(&param_vec);
+        let card_vals = get_assign_card_vals(card);
+        param_hash.insert(k, card_vals);
+        k = k + 1;
+    };
 
-
-
-    let mut elements_hash: common::Elements = HashMap::new();
-
-    let mut n: i32 = 0;
-
-    for e in element_vec {
-        let mut min = e[1].to_string();
-        let mut max = e[2].to_string();
-        let mut element_range = "(".to_string();
-        element_range.push_str(&min);
-        element_range.push_str(",");
-        element_range.push_str(&max);
-        element_range.push_str(")");
-
-        let mut py_element = "usedAtoms['".to_string();
-        py_element.push_str(&e[0]);
-        py_element.push_str("']");
-
-        let element_index = ElementIndex {
-            i: n,
-        };            
-
-        let element_value = ElementValue {
-            symbol: py_element,
-            range: element_range,
-        };
-
-        elements_hash.insert(element_index, element_value);
-        n = n + 1;
-
-    }
-
-    return (search_params_hash, elements_hash);
+    return param_hash;
 }
 
 fn read_time_binning_card(content:&String) -> HashMap<&str,&str> {
