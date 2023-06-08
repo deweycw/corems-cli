@@ -5,12 +5,13 @@ use std::collections::HashMap;
 
 #[macro_use]
 
+const INPUT_FILE: &str = "/Users/christiandewey/docker-compose/corems/corems/rawfiles/corems_input.py";
 use crate::common::*;
 
 fn _write_to_file<'a>(preamble:&str,params_hash:&Parameters<'a>) {
     let mut file = OpenOptions::new()
         .append(true)
-        .open("./corems_input.py")
+        .open(INPUT_FILE)
         .unwrap();
 
     let size = params_hash.keys().len();
@@ -38,23 +39,23 @@ fn _write_to_file<'a>(preamble:&str,params_hash:&Parameters<'a>) {
 
 
 pub fn header() {
-    let header = "import os\nfrom tempfile import tempdir\nimport time\nimport numpy as np\nimport warnings\nfrom datetime import date, datetime\nimport pandas as pd\n\nwarnings.filterwarnings('ignore')\nfrom pathlib import Path\nimport sys\nsys.path.append('./')\n\nos.chdir('/CoreMS')\nfrom corems.mass_spectra.input import rawFileReader\nfrom corems.molecular_id.factory.classification import HeteroatomsClassification, Labels\nfrom corems.molecular_id.search.priorityAssignment import OxygenPriorityAssignment\nfrom corems.molecular_id.search.molecularFormulaSearch import SearchMolecularFormulas\nfrom corems.encapsulation.factory.parameters import MSParameters\nfrom corems.encapsulation.constant import Atoms\nfrom corems.mass_spectrum.calc.Calibration import MzDomainCalibration\nimport corems.lc_icpms_ftms.calc.lc_icrms_qc_assign as icrms\nimport corems.lc_icpms_ftms.calc.lc_icrms_helpers as lcmsfns\nos.chdir('/CoreMS/usrdata')\n";
+    let header = "import os\nfrom tempfile import tempdir\nimport time\nimport numpy as np\nimport warnings\nfrom datetime import date, datetime\nimport pandas as pd\n\nwarnings.filterwarnings('ignore')\nfrom pathlib import Path\nimport sys\nsys.path.append('./')\n\nos.chdir('/CoreMS')\nfrom corems.mass_spectra.input import rawFileReader\nfrom corems.molecular_id.factory.classification import HeteroatomsClassification, Labels\nfrom corems.molecular_id.search.priorityAssignment import OxygenPriorityAssignment\nfrom corems.molecular_id.search.molecularFormulaSearch import SearchMolecularFormulas\nfrom corems.encapsulation.factory.parameters import MSParameters\nfrom corems.encapsulation.constant import Atoms\nfrom corems.mass_spectrum.calc.Calibration import MzDomainCalibration\n#import corems.lc_icpms_ftms.calc.lc_icrms_qc_assign as icrms\n#import corems.lc_icpms_ftms.calc.lc_icrms_helpers as lcmsfns\nos.chdir('/CoreMS/usrdata')\n";
     let mut file = OpenOptions::new()
         .write(true)
         .create_new(true)
-        .open("./corems_input.py");
-    fs::write("./corems_input.py",header).expect("File not written");
+        .open(INPUT_FILE);
+    fs::write(INPUT_FILE,header).expect("File not written");
  }
 
 pub fn global_params<'a>(global_params_hash:Parameters<'a>) {
     let preamble = "\tMSParameters.molecular_search.";
     let mut file = OpenOptions::new()
         .append(true)
-        .open("./corems_input.py")
+        .open(INPUT_FILE)
         .unwrap();
    
     writeln!(&file,"\n");
-    writeln!(&file,"\t#global search settings");
+    writeln!(&file,"\t#global search settings\n\tMSParameters.molecular_search.url_database = 'postgresql+psycopg2://coremsappdb:coremsapppnnl@corems-molformdb-1:5432/coremsapp'");
     _write_to_file(preamble,&global_params_hash);
 }
 
@@ -62,7 +63,7 @@ pub fn first_search_params<'a>(search_params_hash:&Parameters<'a>) {
     let preamble = "\t\tMSParameters.molecular_search.";
     let mut file = OpenOptions::new()
         .append(true)
-        .open("./corems_input.py")
+        .open(INPUT_FILE)
         .unwrap();
    
     writeln!(&file,"\n");
@@ -74,7 +75,7 @@ pub fn next_search_params<'a>(search_params_hash:&Parameters<'a>) {
     let preamble = "\t\tMSParameters.molecular_search.";
     let mut file = OpenOptions::new()
         .append(true)
-        .open("./corems_input.py")
+        .open(INPUT_FILE)
         .unwrap();
    
     writeln!(&file,"\n");
@@ -89,7 +90,7 @@ pub fn first_elements(elements_hash:&Elements) {
     let preamble = "\t\tMSParameters.molecular_search.";
     let mut file = OpenOptions::new()
         .append(true)
-        .open("./corems_input.py")
+        .open(INPUT_FILE)
         .unwrap();
     writeln!(&file,"\n\t\t#first search elements");
 
@@ -120,7 +121,7 @@ pub fn next_elements(elements_hash:&Elements) {
     let preamble = "\t\tMSParameters.molecular_search.";
     let mut file = OpenOptions::new()
         .append(true)
-        .open("./corems_input.py")
+        .open(INPUT_FILE)
         .unwrap();
     writeln!(&file,"\n\t\t#next search elements");
 
@@ -151,7 +152,7 @@ pub fn assign_func_header() {
     
     let mut file = OpenOptions::new()
         .append(true)
-        .open("./corems_input.py")
+        .open(INPUT_FILE)
         .unwrap();
     
     let mut newline = preamble.to_owned();
@@ -164,7 +165,7 @@ pub fn run_search(first_hit: &str) {
     
     let mut file = OpenOptions::new()
         .append(true)
-        .open("./corems_input.py")
+        .open(INPUT_FILE)
         .unwrap();
 
     let mut newline = preamble.to_owned();
@@ -178,7 +179,7 @@ pub fn assign_chunk() {
     
     let mut file = OpenOptions::new()
         .append(true)
-        .open("./corems_input.py")
+        .open(INPUT_FILE)
         .unwrap();
     
     let mut newline = preamble.to_owned();
@@ -192,7 +193,7 @@ pub fn search_chunk() {
 
     let mut file = OpenOptions::new()
         .append(true)
-        .open("./corems_input.py")
+        .open(INPUT_FILE)
         .unwrap();
 
     let mut newline = preamble.to_owned();
@@ -206,7 +207,7 @@ pub fn search_return() {
 
     let mut file = OpenOptions::new()
         .append(true)
-        .open("./corems_input.py")
+        .open(INPUT_FILE)
         .unwrap();
 
     let mut newline = preamble.to_owned();
@@ -220,7 +221,7 @@ pub fn calibration_chunk(cal_params_hash: HashMap<&str, String>) {
     
     let mut file = OpenOptions::new()
         .append(true)
-        .open("./corems_input.py")
+        .open(INPUT_FILE)
         .unwrap();
 
     let mut newline = preamble.to_owned();
@@ -235,7 +236,7 @@ pub fn calibration_chunk(cal_params_hash: HashMap<&str, String>) {
 
 pub fn py_main(time_params_hash:HashMap<&str,&str>) {
 
-    let func_body = "\n\n\nif __name__ -- '__main__':\n\n\tdata_dir = '/CoreMS/usrdata/'\n\n\tinterval = ";
+    let func_body = "\n\n\nif __name__ == '__main__':\n\n\tdata_dir = '/CoreMS/usrdata/'\n\tresults = []\n\n\tinterval = ";
 
     let mut newline = func_body.to_owned();
     
@@ -250,11 +251,11 @@ pub fn py_main(time_params_hash:HashMap<&str,&str>) {
     newline.push_str("\n\ttime_max = ");
     newline.push_str(time_max);
 
-    newline.push_str("\n\ttimes = list(range(time_min,time_max,interval))\n\n\tflist = os.listdir(data_dir)\n\tf_raw = [f for f in flist if '.raw' in f]\n\tos.chdir(data_dir)\n\ti=1\n\n\tfor i in f_raw:\n\t\toutput = assign_formula(esifile = f, times = times)\n\t\toutput['file'] = f\n\t\tresults.append(output)\n\t\ti = i + 1 \n\n\tdf = pd.concat(results)\n\tdf.to_csv(data_dir+fname)");
+    newline.push_str("\n\ttimes = list(range(time_min,time_max,interval))\n\n\tflist = os.listdir(data_dir)\n\tf_raw = [f for f in flist if '.raw' in f]\n\tos.chdir(data_dir)\n\ti=1\n\n\tfor f in f_raw:\n\t\toutput = assign_formula(esifile = f, times = times)\n\t\toutput['file'] = f\n\t\tresults.append(output)\n\t\ti = i + 1 \n\n\tdf = pd.concat(results)\n\tdf.to_csv(data_dir+fname)");
 
     let mut file = OpenOptions::new()
         .append(true)
-        .open("./corems_input.py")
+        .open(INPUT_FILE)
         .unwrap();
 
     

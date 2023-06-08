@@ -34,7 +34,7 @@ pub mod write_py;
 
 
 
-const IMAGE: &str = "deweycw/debian";
+const IMAGE: &str = "deweycw/corems:amd64";
 
 #[derive(Parser)]
 struct Cli {
@@ -72,7 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
             source: Some(if cfg!(windows) {
                 String::from("C:\\Windows\\Temp")
             } else {
-                String::from("/Users/christiandewey/corems-docker/corems/rawfiles")
+                String::from("/Users/christiandewey/docker-compose/corems/corems/rawfiles")
             }),
             typ: Some(MountTypeEnum::BIND),
             consistency: Some(String::from("default")),
@@ -177,11 +177,11 @@ fn find_cards<'a>(content:&'a String) {
     if !global_settings_card {
         println!("GLOBAL_SETTINGS card must be defined to proceed!");
     }
-    if !rawfiles_card {
-        println!("RAWFILES card must be defined to proceed!");
-    } else {
-        read_rawfiles_card(&content);
-    }
+    //if !rawfiles_card {
+    //    println!("RAWFILES card must be defined to proceed!");
+    //} else {
+    //    read_rawfiles_card(&content);
+    // }
 
     if !time_binning_card {
         println!("TIME_BINNING card not found; all scans will be averaged.");
@@ -202,10 +202,7 @@ fn find_cards<'a>(content:&'a String) {
     
     let mut global_params: Parameters<'a> = read_global_settings_card(&content);
     let mut assign_params_hash = read_search_card(&content);
-    println!("{:?}",assign_params_hash.get(&1).unwrap());
-    println!("yes");
     let first_search = assign_params_hash.get(&1).unwrap();
-    println!("{:?}", &first_search);
     let first_search_params = &first_search.params;
     let first_elements = &first_search.elements;
     
@@ -343,9 +340,6 @@ fn read_calibration_card(content:&String) -> HashMap<&str,String> {
 
     let mut cal_params_hash: HashMap<_, _> = param_vec.into_iter().collect();
 
-    println!("{:?}", cal_params_hash);
-
-
     return cal_params_hash;
 
 }
@@ -363,8 +357,6 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>> {
     let assign_card_grouped = card_split[1];
 
     let assign_cards: Vec<&str> = assign_card_grouped.split("ASSIGNMENT").collect();
-    println!("{:?}",assign_cards);
-
     
     fn get_assign_card_vals<'a>(card:&'a str) ->AssignParams<'a> {
         let mut read_elements_card = false;
@@ -505,7 +497,6 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>> {
                             read_elements_card = false;
                             break;
                         } else {
-                            println!("kjhl");
                             continue;
                         }
                     }
@@ -591,7 +582,6 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>> {
 
     let mut k: i32 = 1;
     for card in assign_cards {
-        println!("{:?}",card);
         let card_vec: Vec<&str> = card.split_whitespace().collect();
 
         if card_vec.len() > 1{
