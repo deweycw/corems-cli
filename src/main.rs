@@ -226,9 +226,10 @@ fn find_cards<'a>(content:&'a String) {
     if num_assign > 1 {
 
         let it: i32 = num_assign as i32;
-        for a in 2..it {
+        for a in 1..it {
             first_hit = "True";
-            let search = assign_params_hash.get(&a).unwrap();
+            let i = a + 1;
+            let search = assign_params_hash.get(&i).unwrap();
             let search_params = &search.params;
             let elements = &search.elements;
             write_py::next_search_params(search_params);
