@@ -3,4 +3,5 @@ target/
 corems_input.py
 corems.in
 assignments.csv
+*code-workspace
 
