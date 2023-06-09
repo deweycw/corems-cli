@@ -17,6 +17,7 @@ include:
     file: cms_test-$TRAVIS_TAG-$TARGET.tar.gz
     on: 
       tags: true
+      branch: release
 
 - name: OSX Binary
   env: TARGET=osx
@@ -28,3 +29,4 @@ include:
     file: cms_test-$TRAVIS_TAG-$TARGET-x86_64.tar.gz
     on: 
       tags: true
+      branch: release
