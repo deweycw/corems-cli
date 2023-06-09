@@ -6,6 +6,8 @@ DEPLOY_TO_GITHUB: &DEPLOY_TO_GITHUB
     - git config --local user.name "deweycw"
     - git config --local user.email "dewey.christian@gmail.com"
     - name="cms-$TRAVIS_TAG-$TARGET"
+    - mkdir $name
+    - cp target/$TARGET/release/docker-rust $name/
     - tar czvf $name.tar.gz $name
   deploy:
     provider: releases
