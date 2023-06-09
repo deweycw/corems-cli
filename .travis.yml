@@ -11,6 +11,7 @@ DEPLOY_TO_GITHUB: &DEPLOY_TO_GITHUB
     - tar czvf $name.tar.gz $name
   deploy:
     provider: releases
+    api_key: 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
     file: cms_test-$TRAVIS_TAG-$TARGET.tar.gz
     skip_cleanup: true
     on:
