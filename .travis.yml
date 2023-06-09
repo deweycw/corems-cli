@@ -1,6 +1,4 @@
 language: rust
-os:
-  - osx 
 cache: cargo
 
 DEPLOY_TO_GITHUB: &DEPLOY_TO_GITHUB
@@ -16,7 +14,7 @@ DEPLOY_TO_GITHUB: &DEPLOY_TO_GITHUB
     file: cms_test-$TRAVIS_TAG-$TARGET.tar.gz
     skip_cleanup: true
     on:
-      branch: master
+      branch: releases
       tags: true
 
 
@@ -29,7 +27,9 @@ jobs:
     <<: *DEPLOY_TO_GITHUB
 
   - name: OSX Binary
-    env: TARGET=osx
+    env: MACOSX_DEPLOYMENT_TARGET=10.7 TARGET=x86_64-apple-darwin
+    os: osx
     rust: stable
     script: cargo build --release --target $TARGET
+    install: true
     <<: *DEPLOY_TO_GITHUB
