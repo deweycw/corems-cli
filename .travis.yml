@@ -3,6 +3,7 @@ os:
   - osx 
   - linux
 cache: cargo
+dist: trusty
 
 jobs: 
   include:
@@ -15,7 +16,7 @@ jobs:
       provider: releases
       file: cms_test-$TRAVIS_TAG-$TARGET.tar.gz
       on:
-        branch: master
+        branch: add-network
 
   - name: OSX Binary
     env: TARGET=osx
@@ -25,3 +26,5 @@ jobs:
     deploy: 
       provider: releases
       file: cms_test-$TRAVIS_TAG-$TARGET-x86_64.tar.gz
+      on:
+        branch: add-network
