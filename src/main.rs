@@ -3,18 +3,22 @@ use bollard::container::{
     DownloadFromContainerOptions, InspectContainerOptions, KillContainerOptions,
     ListContainersOptions, LogsOptions, PruneContainersOptions, RemoveContainerOptions,
     RenameContainerOptions, ResizeContainerTtyOptions, RestartContainerOptions, StatsOptions,
-    TopOptions, UpdateContainerOptions, UploadToContainerOptions, WaitContainerOptions,
+    TopOptions, UpdateContainerOptions, UploadToContainerOptions, WaitContainerOptions,StopContainerOptions,
 };
 use bollard::Docker;
+use bollard::auth::DockerCredentials;
 
 use bollard::exec::{CreateExecOptions, ResizeExecOptions, StartExecResults};
 use bollard::image::{CreateImageOptions, PushImageOptions, TagImageOptions};
+use bollard::network::{ConnectNetworkOptions, ListNetworksOptions, CreateNetworkOptions, InspectNetworkOptions};
+use bollard::volume::{CreateVolumeOptions};
 use bollard::models::*;
 
 use futures_util::{StreamExt, TryStreamExt};
 use std::io::{stdout, Read, Write};
 use std::time::Duration;
 use std::collections::HashMap;
+use std::env::{set_current_dir, current_dir};
 
 #[cfg(not(windows))]
 use termion::raw::IntoRawMode;
@@ -33,8 +37,9 @@ use crate::common::*;
 pub mod write_py;
 
 
+const COREMS_IMAGE: &str = "deweycw/corems_test";
+const DB_IMAGE: &str = "postgres";
 
-const IMAGE: &str = "deweycw/corems:amd64";
 
 #[derive(Parser)]
 struct Cli {
@@ -43,7 +48,9 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
-    
+    let WORKING_DIR: std::path::PathBuf = current_dir().unwrap();
+    set_current_dir(&WORKING_DIR).expect("Couldn't change into current directory.");
+    let CWD: String = WORKING_DIR.into_os_string().into_string().unwrap();
     let args = Cli::parse();
     let content = std::fs::read_to_string(&args.path).expect("could not read file");
     
@@ -53,7 +60,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
 
     let mut port_bindings = ::std::collections::HashMap::new();
     port_bindings.insert(
-
         String::from("8080/tcp"),
         Some(vec![PortBinding {
             host_ip: Some(String::from("127.0.0.1")),
@@ -70,9 +76,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
                 String::from("/CoreMS/usrdata")
             }),
             source: Some(if cfg!(windows) {
-                String::from("C:\\Windows\\Temp")
+                String::from(CWD)
             } else {
-                String::from("/Users/christiandewey/docker-compose/corems/corems/rawfiles")
+                String::from(CWD)
             }),
             typ: Some(MountTypeEnum::BIND),
             consistency: Some(String::from("default")),
@@ -82,27 +88,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
         ..Default::default()
     };
 
+
     docker
         .create_image(
             Some(CreateImageOptions {
-                from_image: IMAGE,
+                from_image: COREMS_IMAGE,
                 ..Default::default()
             }),
             None,
-            None,
+            Some(DockerCredentials {
+                username: Some(String::from("deweycw")),
+                password: Some(String::from("W2cF5eMm6@Q8tYW")),
+                ..Default::default()
+            }), 
         )
         .try_collect::<Vec<_>>()
         .await?;
         
 
-    let id = &docker
+    let corems_id = &docker
         .create_container(
             Some(CreateContainerOptions {
-                name: "test2",
+                name: "corems-cli",
                 platform: None,
             }),
             Config {
-                image:Some(IMAGE),
+                image:Some(COREMS_IMAGE),
                 tty: Some(true),
                 host_config: Some(host_config),
                 ..Default::default()
@@ -111,12 +122,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
         .await?
         .id;
 
-    docker.start_container::<String>(&id, None).await?;
+    docker.start_container::<String>(&corems_id, None).await?;
+
+
+    let connect_network_options = ConnectNetworkOptions {
+        container: "corems-cli",
+        endpoint_config: EndpointSettings {
+            ..Default::default()
+        }
+    };
+
+    docker.connect_network("docker-mnt_default", connect_network_options).await?;
+
+    docker.start_container::<String>("docker-mnt-molformdb-1", None).await?;
+
 
     // non interactive
     let exec = docker
         .create_exec(
-            &id,
+            &corems_id,
             CreateExecOptions {
                 attach_stdout: Some(true),
                 attach_stderr: Some(true),
@@ -133,16 +157,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
     } else {
         unreachable!();
     }
-
     docker
-        .remove_container(
-            &id,
-            Some(RemoveContainerOptions {
-                force: true,
-                ..Default::default()
-            }),
-        )
-        .await?;
+    .remove_container(
+        &corems_id,
+        Some(RemoveContainerOptions {
+            force: true,
+            ..Default::default()
+        }),
+    )
+    .await?;
+
 
     Ok(())
 }
@@ -216,12 +240,12 @@ fn find_cards<'a>(content:&'a String) {
     write_py::global_params(global_params);
     write_py::assign_chunk();
     write_py::first_search_params(first_search_params);
-    write_py::calibration_chunk(cal_params);
     write_py::first_elements(first_elements);
+    write_py::calibration_chunk(cal_params);
     let mut first_hit:&str = "False";
     write_py::run_search(&first_hit);
+    write_py::search_chunk();
     if num_assign > 1 {
-
         let it: i32 = num_assign as i32;
         for a in 1..it {
             first_hit = "True";
@@ -232,9 +256,9 @@ fn find_cards<'a>(content:&'a String) {
             write_py::next_search_params(search_params);
             write_py::next_elements(elements); 
             write_py::run_search(&first_hit); 
+            write_py::search_chunk();
         } 
     }
-    write_py::search_chunk();
     write_py::search_return();
     write_py::py_main(time_params);
 }
@@ -366,10 +390,10 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>> {
         let mut ion_charge = "1";
         let mut ion_type_selected = false;
         let mut is_radical = "False";
-        let mut is_protonated = "False";
+        let mut is_protonated = "True";
         let mut is_adduct = "False";
-        let mut oc_filter = "1.0";
-        let mut hc_filter = "2.0";
+        let mut oc_filter = "0";
+        let mut hc_filter = "0";
         let mut element_vec = Vec::new();
         let mut filters_vec = Vec::new();
         let mut element_return = false;
@@ -387,7 +411,7 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>> {
                     element_return = true;
                 }
                 if line.contains("FILTERS") {
-                    read_filters_card = true;
+                    read_filters_card = false;
                 }
                 if line.contains("DBE") {
                     let vec: Vec<&str> = line.split_whitespace().collect();
@@ -501,8 +525,9 @@ fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>> {
                         }
                     }
                 }
-                
+                read_filters_card = false;
                 if read_filters_card {
+                    println!("yes");
                     let vec_f: Vec<&str> = card.split("FILTERS").collect();
                     let tempf = vec_f[1];
                     let filters_grp = tempf.to_string();

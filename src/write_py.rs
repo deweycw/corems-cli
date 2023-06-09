@@ -2,10 +2,19 @@ use std::fs;
 use std::io::Write;
 use std::fs::OpenOptions;
 use std::collections::HashMap;
+use std::env;
+use std::path::Path;
+
 
 #[macro_use]
 
-const INPUT_FILE: &str = "/Users/christiandewey/docker-compose/corems/corems/rawfiles/corems_input.py";
+//const WORKING_DIR = get_current_working_dir();
+
+
+const INPUT_FILE: &str = "corems_input.py";
+
+
+
 use crate::common::*;
 
 fn _write_to_file<'a>(preamble:&str,params_hash:&Parameters<'a>) {
@@ -16,8 +25,6 @@ fn _write_to_file<'a>(preamble:&str,params_hash:&Parameters<'a>) {
 
     let size = params_hash.keys().len();
     let nparams = size as i32;
-
-    println!("{} params found", nparams);
 
     for n in 0..nparams {
 
@@ -55,7 +62,7 @@ pub fn global_params<'a>(global_params_hash:Parameters<'a>) {
         .unwrap();
    
     writeln!(&file,"\n");
-    writeln!(&file,"\t#global search settings\n\tMSParameters.molecular_search.url_database = 'postgresql+psycopg2://coremsappdb:coremsapppnnl@corems-molformdb-1:5432/coremsapp'");
+    writeln!(&file,"\t#global search settings\n\tMSParameters.molecular_search.url_database = 'postgresql+psycopg2://coremsappdb:coremsapppnnl@docker-mnt-molformdb-1:5432/coremsapp'");
     _write_to_file(preamble,&global_params_hash);
 }
 
@@ -128,8 +135,6 @@ pub fn next_elements(elements_hash:&Elements) {
     let size = elements_hash.keys().len();
     let nelements = size as i32;
 
-    println!("{} elements found", nelements);
-
     for n in 0..nelements {
 
         let nIndex = ElementIndex {
@@ -148,7 +153,7 @@ pub fn next_elements(elements_hash:&Elements) {
 
 
 pub fn assign_func_header() {
-    let preamble = "\n\ndef assign_formula(esifile, times, cal_ppm_threshold=(-1,1), refmasslist=None):";
+    let preamble = "\n\ndef assign_formula(esifile, times):";
     
     let mut file = OpenOptions::new()
         .append(true)
@@ -175,7 +180,7 @@ pub fn run_search(first_hit: &str) {
 }
 
 pub fn assign_chunk() {
-    let preamble = "\n\tparser = rawFileReader.ImportMassSpectraThermoMSFileReader(esifile)\n\n\ttic=parser.get_tic(ms_type='MS')[0]\n\ttic_df=pd.DataFrame({'time': tic.time,'scan': tic.scans})\n\tresults = []\n\n\tfor timestart in times:\n\n\t\tscans=tic_df[tic_df.time.between(timestart,timestart+interval)].scan.tolist()\n\t\tmass_spectrum = parser.get_average_mass_spectrum_by_scanlist(scans) ";
+    let preamble = "\n\tMSParameters.mass_spectrum.threshold_method = 'signal_noise'\n\tMSParameters.mass_spectrum.s2n_threshold = 3\n\n\tparser = rawFileReader.ImportMassSpectraThermoMSFileReader(esifile)\n\n\ttic=parser.get_tic(ms_type='MS')[0]\n\ttic_df=pd.DataFrame({'time': tic.time,'scan': tic.scans})\n\tresults = []\n\n\tfor timestart in times:\n\n\t\tscans=tic_df[tic_df.time.between(timestart,timestart+interval)].scan.tolist()\n\t\tmass_spectrum = parser.get_average_mass_spectrum_by_scanlist(scans) ";
     
     let mut file = OpenOptions::new()
         .append(true)
@@ -217,7 +222,7 @@ pub fn search_return() {
 
 
 pub fn calibration_chunk(cal_params_hash: HashMap<&str, String>) {
-    let preamble = "\n\t\t# calibration settings\n\t\tmass_spectrum.settings.min_calib_ppm_error = -10\n\t\tmass_spectrum.settings.max_calib_ppm_error = 10\n\t\tcalfn = MzDomainCalibration(mass_spectrum, ";
+    let preamble = "\n\t\t# calibration settings\n\t\tmass_spectrum.settings.min_calib_ppm_error = -10\n\t\tmass_spectrum.settings.max_calib_ppm_error = 10\n\t\trefmasslist = ";
     
     let mut file = OpenOptions::new()
         .append(true)
@@ -228,7 +233,16 @@ pub fn calibration_chunk(cal_params_hash: HashMap<&str, String>) {
     
     let string_holder = cal_params_hash.get("ref_mass_list").unwrap();
     newline.push_str(string_holder);
-    newline.push_str(")");
+
+    let calib_ppm_holder = cal_params_hash.get("calib_ppm_error_threshold").unwrap();
+    newline.push_str("\n\t\tcal_ppm_threshold = ");
+    newline.push_str(calib_ppm_holder);
+
+    let calib_snr_holder = cal_params_hash.get("calib_snr_thrshold").unwrap();
+    newline.push_str("\n\t\tcal_snr_thr = ");
+    newline.push_str(calib_snr_holder);
+
+    newline.push_str("\n\t\tcalfn = MzDomainCalibration(mass_spectrum,refmasslist) \n\t\tref_mass_list_fmt = calfn.load_ref_mass_list(refmasslist)\n\t\timzmeas, mzrefs = calfn.find_calibration_points(mass_spectrum, ref_mass_list_fmt, calib_ppm_error_threshold=cal_ppm_threshold, calib_snr_threshold=cal_snr_thr)\n\t\tcalfn.recalibrate_mass_spectrum(mass_spectrum, imzmeas, mzrefs, order=2)");
     writeln!(&file,"{newline}");
 
 }
@@ -251,7 +265,7 @@ pub fn py_main(time_params_hash:HashMap<&str,&str>) {
     newline.push_str("\n\ttime_max = ");
     newline.push_str(time_max);
 
-    newline.push_str("\n\ttimes = list(range(time_min,time_max,interval))\n\n\tflist = os.listdir(data_dir)\n\tf_raw = [f for f in flist if '.raw' in f]\n\tos.chdir(data_dir)\n\ti=1\n\n\tfor f in f_raw:\n\t\toutput = assign_formula(esifile = f, times = times)\n\t\toutput['file'] = f\n\t\tresults.append(output)\n\t\ti = i + 1 \n\n\tdf = pd.concat(results)\n\tdf.to_csv(data_dir+fname)");
+    newline.push_str("\n\ttimes = list(range(time_min,time_max,interval))\n\tprint(times)\n\n\tflist = os.listdir(data_dir)\n\tf_raw = [f for f in flist if '.raw' in f]\n\tos.chdir(data_dir)\n\ti=1\n\n\tfor f in f_raw:\n\t\tprint(f)\n\t\toutput = assign_formula(esifile = f, times = times)\n\t\toutput['file'] = f\n\t\tresults.append(output)\n\t\ti = i + 1 \n\n\tfname = 'assignments.csv'\n\tdf = pd.concat(results)\n\tdf.to_csv(data_dir+fname)");
 
     let mut file = OpenOptions::new()
         .append(true)
