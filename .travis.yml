@@ -1,52 +1,40 @@
 language: rust
 cache: cargo
 
-GH_TOKEN: &GH_TOKEN
-  secure: jADRTt46whb1uU7hcG2X5B2dAXN9Wa7IxpvSbpjjCxqU3kMtRplk3YZit6Fgfm60aqCNeIeh/sC7yvi96L4vMCfsdNyf4ivm5My3Fb8uvbIt4fsKJAIL1p+Yi5PAE0Q7e4S3/UDrZURYgiOsIh2LCNVAecrLVLLZo/aAhBw+XauZl8bzL/3ZlT2/OkxpGY7P8/s7eckc4DMdX1cHhT+QMrLH3andmnqUR4jErYWFj9qaCocovriwJ0Bxlweq35x/FaKbL3XF4MSC2+qALJvmbED7/BvO2YEAkJ/zF0tXRum5BzJL/aE9dllu4h0itmUjfFu4SZvDaed27oTvi/eSWC9uXUapRrBApzwkRPt1quKkISk/wlloIe8AzT9qL+YRf8F9Tgia1kycpyLPp5/zAgtBwK/pltNQrp4sN3I2hnSAK/yJrw+VK7Yd6KdGFOv/RuUgXOEkHWVDN9Bbcb7BlLeWUdPiW+HdITWG4HGSI+yN1MBBvL4pDmM0X2OsgsEhm+D4UvEkbJPA51fT2IgQevbH4MxejQPib4Wukc3SOOecrFXd5jy/ay2rovTJ1jWWUGeH2I2ZpZjwo2Uw2alvPMu3NPFMmLEsMaDvbFiyglq1b0QKbjv0Xiur1RUMpEQ6rT3V/SfZf1hY/J6MfmqoRnwzzyCJOaRGOLGBCq8h6HQ=
+env:
+  global:
+    secure: a8jkGCxCsyvY55g4+tom4gDjUDEO4LwFZB6Ugx9CP3ZAlqaTjZkQrmgDCl1qTU1jEq/Outm54qKQM9x8RyUL7/bkK0f40OPq4n96HkSK5f80KPYMzSpNY5rr3b53mwGPKd8MLSl2PLfQEhlfK7BuECBaL7PpPBgVuU6UhmWmaz+v3YltB2/gxPztH2JYYB0SsIp1pd/4bp/FxUR6URuldaa7ir+h7yvdsqya1ZzQQi0UpSHB8thXHJYqfaR6mrrFBgGAClypCS5wXHALspPpv4GuCx+YaDX0moMrrZkAJP2KtTsEPwcrCz7sz8fv4mora+ZV8PLioZP7OtD4uWpvHttvqMgw0HFkrRJ9z1qI9wRTq11JD4LcEbzli8R7zUl2xNlPQoNilfi9tUuEdL/laukbyZ9hVwMRcpBlAS1bmKr2t61HBzgFi5FaBgCcdS9FEjLgj2UanbZoK2jqclc74SxXjjwRcFKHS9y23imi/sXRM1N+zN3KKT6WbZiRYdCz5eNQ+xVfTHy1+oUydxxufHkGCgTXqgfsQ3/BT0dXXNJPx0/EpYPw5tkdOE3OQ7D0RPjGI1nj+w/NTxMpuoy+YwhGgHtQUhoks3m8PIn4CFxLQ2g6zRKYcTGr8iOcm1HbM3qw4HxwKqWcIni9Uv1Qs3DT8vzgx6H+qyUpNLRpDkM=
 
-DEPLOY_TO_GITHUB: &DEPLOY_TO_GITHUB
-  before_deploy:
-    - git config --local user.name "deweycw"
-    - git config --local user.email "dewey.christian@gmail.com"
-    - name="cms-$TRAVIS_TAG-$TARGET"
-    - mkdir $name
-    - cp target/$TARGET/release/docker-rust $name/
-    - tar czvf $name.tar.gz $name
-  deploy:
+DEPLOY_TO_GITHUB:
+  before_deploy: &2
+  - git config --local user.name "deweycw"
+  - git config --local user.email "dewey.christian@gmail.com"
+  - name="cms-$TRAVIS_TAG-$TARGET"
+  - mkdir $name
+  - cp target/$TARGET/release/docker-rust $name/
+  - tar czvf $name.tar.gz $name
+  deploy: &3
     provider: releases
-    token: *GH_TOKEN
     file: cms_test-$TRAVIS_TAG-$TARGET.tar.gz
     skip_cleanup: true
     on:
       branch: release
       tags: true
-
-
-jobs: 
+jobs:
   include:
   - name: Linux Binary
     env: TARGET=x86_64-unknown-linux-musl
     rust: stable
     before_script:
-      - rustup target add x86_64-unknown-linux-musl
+    - rustup target add x86_64-unknown-linux-musl
     script: cargo build --release --target $TARGET
-    <<: *DEPLOY_TO_GITHUB
-
+    before_deploy: *2
+    deploy: *3
   - name: OSX Binary
     env: MACOSX_DEPLOYMENT_TARGET=10.7 TARGET=x86_64-apple-darwin
     os: osx
     rust: stable
     script: cargo build --release --target $TARGET
     install: true
-    <<: *DEPLOY_TO_GITHUB
-
-
-
-
-
-
-
-
-
-
-
+    before_deploy: *2
+    deploy: *3
