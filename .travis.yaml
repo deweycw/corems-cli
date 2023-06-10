@@ -18,7 +18,7 @@ DEPLOY_TO_GITHUB: &DEPLOY_TO_GITHUB
     file: cms_test-$TRAVIS_TAG-$TARGET.tar.gz
     skip_cleanup: true
     on:
-      branch: releases
+      branch: release
       tags: true
 
 
