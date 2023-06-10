@@ -1,9 +1,8 @@
 language: rust
 cache: cargo
 
-env:
-  global:
-    secure: a8jkGCxCsyvY55g4+tom4gDjUDEO4LwFZB6Ugx9CP3ZAlqaTjZkQrmgDCl1qTU1jEq/Outm54qKQM9x8RyUL7/bkK0f40OPq4n96HkSK5f80KPYMzSpNY5rr3b53mwGPKd8MLSl2PLfQEhlfK7BuECBaL7PpPBgVuU6UhmWmaz+v3YltB2/gxPztH2JYYB0SsIp1pd/4bp/FxUR6URuldaa7ir+h7yvdsqya1ZzQQi0UpSHB8thXHJYqfaR6mrrFBgGAClypCS5wXHALspPpv4GuCx+YaDX0moMrrZkAJP2KtTsEPwcrCz7sz8fv4mora+ZV8PLioZP7OtD4uWpvHttvqMgw0HFkrRJ9z1qI9wRTq11JD4LcEbzli8R7zUl2xNlPQoNilfi9tUuEdL/laukbyZ9hVwMRcpBlAS1bmKr2t61HBzgFi5FaBgCcdS9FEjLgj2UanbZoK2jqclc74SxXjjwRcFKHS9y23imi/sXRM1N+zN3KKT6WbZiRYdCz5eNQ+xVfTHy1+oUydxxufHkGCgTXqgfsQ3/BT0dXXNJPx0/EpYPw5tkdOE3OQ7D0RPjGI1nj+w/NTxMpuoy+YwhGgHtQUhoks3m8PIn4CFxLQ2g6zRKYcTGr8iOcm1HbM3qw4HxwKqWcIni9Uv1Qs3DT8vzgx6H+qyUpNLRpDkM=
+GH_TOKEN: &GH_TOKEN
+  secure: a8jkGCxCsyvY55g4+tom4gDjUDEO4LwFZB6Ugx9CP3ZAlqaTjZkQrmgDCl1qTU1jEq/Outm54qKQM9x8RyUL7/bkK0f40OPq4n96HkSK5f80KPYMzSpNY5rr3b53mwGPKd8MLSl2PLfQEhlfK7BuECBaL7PpPBgVuU6UhmWmaz+v3YltB2/gxPztH2JYYB0SsIp1pd/4bp/FxUR6URuldaa7ir+h7yvdsqya1ZzQQi0UpSHB8thXHJYqfaR6mrrFBgGAClypCS5wXHALspPpv4GuCx+YaDX0moMrrZkAJP2KtTsEPwcrCz7sz8fv4mora+ZV8PLioZP7OtD4uWpvHttvqMgw0HFkrRJ9z1qI9wRTq11JD4LcEbzli8R7zUl2xNlPQoNilfi9tUuEdL/laukbyZ9hVwMRcpBlAS1bmKr2t61HBzgFi5FaBgCcdS9FEjLgj2UanbZoK2jqclc74SxXjjwRcFKHS9y23imi/sXRM1N+zN3KKT6WbZiRYdCz5eNQ+xVfTHy1+oUydxxufHkGCgTXqgfsQ3/BT0dXXNJPx0/EpYPw5tkdOE3OQ7D0RPjGI1nj+w/NTxMpuoy+YwhGgHtQUhoks3m8PIn4CFxLQ2g6zRKYcTGr8iOcm1HbM3qw4HxwKqWcIni9Uv1Qs3DT8vzgx6H+qyUpNLRpDkM=
 
 DEPLOY_TO_GITHUB:
   before_deploy: &2
@@ -15,6 +14,7 @@ DEPLOY_TO_GITHUB:
   - tar czvf $name.tar.gz $name
   deploy: &3
     provider: releases
+    token: *GH_TOKEN
     file: cms_test-$TRAVIS_TAG-$TARGET.tar.gz
     skip_cleanup: true
     on:
@@ -22,14 +22,6 @@ DEPLOY_TO_GITHUB:
       tags: true
 jobs:
   include:
-  - name: Linux Binary
-    env: TARGET=x86_64-unknown-linux-musl
-    rust: stable
-    before_script:
-    - rustup target add x86_64-unknown-linux-musl
-    script: cargo build --release --target $TARGET
-    before_deploy: *2
-    deploy: *3
   - name: OSX Binary
     env: MACOSX_DEPLOYMENT_TARGET=10.7 TARGET=x86_64-apple-darwin
     os: osx
