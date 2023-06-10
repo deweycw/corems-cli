@@ -1,6 +1,9 @@
 language: rust
 cache: cargo
 
+GH_TOKEN: &GH_TOKEN
+  secure: "jADRTt46whb1uU7hcG2X5B2dAXN9Wa7IxpvSbpjjCxqU3kMtRplk3YZit6Fgfm60aqCNeIeh/sC7yvi96L4vMCfsdNyf4ivm5My3Fb8uvbIt4fsKJAIL1p+Yi5PAE0Q7e4S3/UDrZURYgiOsIh2LCNVAecrLVLLZo/aAhBw+XauZl8bzL/3ZlT2/OkxpGY7P8/s7eckc4DMdX1cHhT+QMrLH3andmnqUR4jErYWFj9qaCocovriwJ0Bxlweq35x/FaKbL3XF4MSC2+qALJvmbED7/BvO2YEAkJ/zF0tXRum5BzJL/aE9dllu4h0itmUjfFu4SZvDaed27oTvi/eSWC9uXUapRrBApzwkRPt1quKkISk/wlloIe8AzT9qL+YRf8F9Tgia1kycpyLPp5/zAgtBwK/pltNQrp4sN3I2hnSAK/yJrw+VK7Yd6KdGFOv/RuUgXOEkHWVDN9Bbcb7BlLeWUdPiW+HdITWG4HGSI+yN1MBBvL4pDmM0X2OsgsEhm+D4UvEkbJPA51fT2IgQevbH4MxejQPib4Wukc3SOOecrFXd5jy/ay2rovTJ1jWWUGeH2I2ZpZjwo2Uw2alvPMu3NPFMmLEsMaDvbFiyglq1b0QKbjv0Xiur1RUMpEQ6rT3V/SfZf1hY/J6MfmqoRnwzzyCJOaRGOLGBCq8h6HQ="
+
 DEPLOY_TO_GITHUB: &DEPLOY_TO_GITHUB
   before_deploy:
     - git config --local user.name "deweycw"
@@ -11,7 +14,7 @@ DEPLOY_TO_GITHUB: &DEPLOY_TO_GITHUB
     - tar czvf $name.tar.gz $name
   deploy:
     provider: releases
-    api_key: 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
+    api_key: *GH_TOKEN
     file: cms_test-$TRAVIS_TAG-$TARGET.tar.gz
     skip_cleanup: true
     on:
