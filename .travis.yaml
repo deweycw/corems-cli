@@ -39,3 +39,6 @@ jobs:
     script: cargo build --release --target $TARGET
     install: true
     <<: *DEPLOY_TO_GITHUB
+
+
+
