@@ -4,4 +4,5 @@ corems_input.py
 corems.in
 assignments.csv
 *code-workspace
-
+install.sh
+install_*

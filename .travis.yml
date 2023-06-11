@@ -22,11 +22,13 @@ DEPLOY_TO_GITHUB:
       tags: true
 jobs:
   include:
-  - name: OSX Binary
-    env: MACOSX_DEPLOYMENT_TARGET=10.7 TARGET=x86_64-apple-darwin
-    os: osx
+  - name: Windows Binary
+    env: TARGET=x86_64-pc-windows-gnu
     rust: stable
+    before_script:
+    - rustup target add $TARGET
     script: cargo build --release --target $TARGET
     install: true
     before_deploy: *2
     deploy: *3
+
