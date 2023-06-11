@@ -13,5 +13,4 @@ futures-core = "0.3.28"
 bytes = "1.4.0"
 flate2 = "1.0.26"
 tar = "0.4.38"
-termion = "2.0.1"
 clap = { version = "4.0", features = ["derive"] }
