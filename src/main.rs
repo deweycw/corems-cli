@@ -20,10 +20,10 @@ use std::time::Duration;
 use std::collections::HashMap;
 use std::env::{set_current_dir, current_dir};
 
-#[cfg(not(windows))]
-use termion::raw::IntoRawMode;
-#[cfg(not(windows))]
-use termion::{async_stdin, terminal_size};
+//#[cfg(not(windows))]
+//use termion::raw::IntoRawMode;
+//#[cfg(not(windows))]
+//use termion::{async_stdin, terminal_size};
 use tokio::io::AsyncWriteExt;
 use tokio::task::spawn;
 use tokio::time::sleep;
