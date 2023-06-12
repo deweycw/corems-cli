@@ -1,0 +1,19 @@
+services:
+  molformdb:
+    image: postgres
+    restart: always
+    volumes:
+      - db-volume:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    environment:
+      - SQL_HOST=db
+      - SQL_PORT=5432
+      - DATABASE=postgres
+      - POSTGRES_USER=coremsappdb
+      - POSTGRES_PASSWORD=coremsapppnnl
+      - POSTGRES_DB=coremsapp
+      - COREMS_DATABASE_URL="postgresql+psycopg2://coremsappdb:coremsapppnnl@molformdb:5432/coremsapp"
+volumes:
+  db-volume:
+

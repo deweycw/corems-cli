@@ -70,16 +70,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
 
     let host_config = HostConfig {
         mounts: Some(vec![Mount {
-            target: Some(if cfg!(windows) {
-                String::from("C:\\Windows\\Temp")
-            } else {
-                String::from("/CoreMS/usrdata")
-            }),
-            source: Some(if cfg!(windows) {
-                String::from(CWD)
-            } else {
-                String::from(CWD)
-            }),
+            target: Some(String::from("/CoreMS/usrdata")),
+            source: Some(String::from(CWD)),
             typ: Some(MountTypeEnum::BIND),
             consistency: Some(String::from("default")),
             ..Default::default()
@@ -96,11 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
                 ..Default::default()
             }),
             None,
-            Some(DockerCredentials {
-                username: Some(String::from("deweycw")),
-                password: Some(String::from("W2cF5eMm6@Q8tYW")),
-                ..Default::default()
-            }), 
+            None, 
         )
         .try_collect::<Vec<_>>()
         .await?;
@@ -110,7 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
         .create_container(
             Some(CreateContainerOptions {
                 name: "corems-cli",
-                platform: None,
+                platform: Some("linux/amd64"),
             }),
             Config {
                 image:Some(COREMS_IMAGE),
