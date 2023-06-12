@@ -236,20 +236,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "docker-rust"
-version = "0.1.0"
-dependencies = [
- "bollard",
- "bytes",
- "clap",
- "flate2",
- "futures-core",
- "futures-util",
- "tar",
- "tokio",
-]
-
-[[package]]
 name = "errno"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -410,6 +396,20 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "hrms-asgn"
+version = "0.1.0"
+dependencies = [
+ "bollard",
+ "bytes",
+ "clap",
+ "flate2",
+ "futures-core",
+ "futures-util",
+ "tar",
+ "tokio",
+]
 
 [[package]]
 name = "http"
