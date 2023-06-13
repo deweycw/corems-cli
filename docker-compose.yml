@@ -5,7 +5,7 @@ services:
     volumes:
       - db-volume:/var/lib/postgresql/data
     ports:
-      - 5432:5432
+      - 5433:5432
     environment:
       - SQL_HOST=db
       - SQL_PORT=5432

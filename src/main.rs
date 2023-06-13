@@ -37,7 +37,7 @@ use crate::common::*;
 pub mod write_py;
 
 
-const COREMS_IMAGE: &str = "deweycw/corems_test";
+const COREMS_IMAGE: &str = "deweycw/corems-cli";
 const DB_IMAGE: &str = "postgres";
 
 
@@ -120,9 +120,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
         }
     };
 
-    docker.connect_network("docker-mnt_default", connect_network_options).await?;
+    docker.connect_network("corems-cli_default", connect_network_options).await?;
 
-    docker.start_container::<String>("docker-mnt-molformdb-1", None).await?;
+    docker.start_container::<String>("corems-cli-molformdb-1", None).await?;
 
 
     // non interactive

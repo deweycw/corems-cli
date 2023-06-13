@@ -62,7 +62,7 @@ pub fn global_params<'a>(global_params_hash:Parameters<'a>) {
         .unwrap();
    
     writeln!(&file,"\n");
-    writeln!(&file,"\t#global search settings\n\tMSParameters.molecular_search.url_database = 'postgresql+psycopg2://coremsappdb:coremsapppnnl@docker-mnt-molformdb-1:5432/coremsapp'");
+    writeln!(&file,"\t#global search settings\n\tMSParameters.molecular_search.url_database = 'postgresql+psycopg2://coremsappdb:coremsapppnnl@corems-cli-molformdb-1:5432/coremsapp'");
     _write_to_file(preamble,&global_params_hash);
 }
 
@@ -103,8 +103,6 @@ pub fn first_elements(elements_hash:&Elements) {
 
     let size = elements_hash.keys().len();
     let nelements = size as i32;
-
-    println!("{} elements found", nelements);
 
     for n in 0..nelements {
 
