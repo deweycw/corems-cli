@@ -3,4 +3,4 @@ target/
 corems_input.py
 assignments.csv
 *code-workspace
-
+*.DS_Store

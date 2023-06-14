@@ -2,16 +2,16 @@ use std::io::{stdout, Read, Write};
 use std::collections::HashMap;
 
 #[macro_use]
-use crate::write_py::*;
+use crate::assign::write_py::*;
 
-use crate::cards::*;
-use crate::find_cards::read_search_card::*;
-use crate::find_cards::read_global_settings_card::*;
-use crate::find_cards::read_calibration_card::*;
-use crate::find_cards::read_time_binning_card::*;
-use crate::find_cards::common_card::*;
+use crate::assign::cards::*;
+use crate::assign::find_cards::read_search_card::*;
+use crate::assign::find_cards::read_global_settings_card::*;
+use crate::assign::find_cards::read_calibration_card::*;
+use crate::assign::find_cards::read_time_binning_card::*;
+use crate::assign::find_cards::common_card::*;
 
-fn find_cards<'a>(content:&'a String) {
+pub fn find_cards<'a>(content:&'a String) {
     
     let mut global_settings_card = false;
     let mut calibration_card = false;

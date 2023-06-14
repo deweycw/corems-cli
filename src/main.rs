@@ -31,8 +31,7 @@ pub mod common;
 use crate::common::*;
 
 mod assign;
-pub use crate::assign::*;
-
+use crate::assign::find_cards::*;
 
 const COREMS_IMAGE: &str = "deweycw/corems-cli";
 const DB_IMAGE: &str = "postgres";
@@ -47,6 +46,10 @@ struct Arguments {
     remote_host: Option<String>,
     #[clap(default_value="NO_PYTHON_SCRIPT",short, long)]
     script: Option<String>,
+    #[clap(default_value="corems-cli",short, long)]
+    container: Option<String>,
+    #[clap(default_value="corems-cli-molformdb-1",short, long)]
+    database: Option<String>,
 }
 
 
@@ -77,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
 
     if module == String::from("assign") && script == String::from("NO_PYTHON_SCRIPT"){
         let content = std::fs::read_to_string(input_file).expect("could not read input (.in) file");
-        //assign::cards::find_cards(&content);
+        find_cards(&content);
     } else if module == String::from("assign") && script != String::from("NO_PYTHON_SCRIPT"){
         exec_script = String::from("/CoreMS/usrdata/");
         exec_script.push_str(script);
@@ -87,13 +90,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
     
     let mut docker = Docker::connect_with_socket_defaults().unwrap();
 
-    if remote_host != String::from("NO_REMOTE_HOST") {
+    //if remote_host != String::from("NO_REMOTE_HOST") {
 
-        docker = Docker::connect_with_socket(remote_host,120,API_DEFAULT_VERSION).unwrap();
+    //    docker = Docker::connect_with_socket(remote_host,120,API_DEFAULT_VERSION).unwrap();
 
   
- 
-        
     let mut port_bindings = ::std::collections::HashMap::new();
     port_bindings.insert(
         String::from("8080/tcp"),
@@ -129,11 +130,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
         .try_collect::<Vec<_>>()
         .await?;
         
+    let container_name_arg: &Option<String> = &args.script;
+    let CONTAINER_NAME = container_name_arg.as_deref().unwrap();
 
     let corems_id = &docker
         .create_container(
             Some(CreateContainerOptions {
-                name: "corems-cli",
+                name: CONTAINER_NAME,
                 platform: Some("linux/amd64"),
             }),
             Config {
@@ -150,7 +153,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
 
 
     let connect_network_options = ConnectNetworkOptions {
-        container: "corems-cli",
+        container: CONTAINER_NAME,
         endpoint_config: EndpointSettings {
             ..Default::default()
         }
@@ -158,7 +161,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
 
     docker.connect_network("corems-cli_default", connect_network_options).await?;
 
-    docker.start_container::<String>("corems-cli-molformdb-1", None).await?;
+    let database_arg: &Option<String> = &args.script;
+    let DATABASE = database_arg.as_deref().unwrap();
+
+    docker.start_container::<String>(DATABASE, None).await?;
 
 
 
@@ -195,10 +201,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
         }),
     )
     .await?;
-
-
-    
-}
 
 Ok(())
 }

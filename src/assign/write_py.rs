@@ -262,7 +262,7 @@ pub fn write_py_main(time_params_hash:HashMap<&str,&str>) {
     newline.push_str("\n\ttime_max = ");
     newline.push_str(time_max);
 
-    newline.push_str("\n\ttimes = list(range(time_min,time_max,interval))\n\tprint(times)\n\n\tflist = os.listdir(data_dir)\n\tf_raw = [f for f in flist if '.raw' in f]\n\tos.chdir(data_dir)\n\ti=1\n\n\tfor f in f_raw:\n\t\tprint(f)\n\t\toutput = assign_formula(esifile = f, times = times)\n\t\toutput['file'] = f\n\t\tresults.append(output)\n\t\ti = i + 1 \n\n\tfname = 'assignments.csv'\n\tdf = pd.concat(results)\n\tdf.to_csv(data_dir+fname)");
+    newline.push_str("\n\ttimes = list(range(time_min,time_max,interval))\n\n\tflist = os.listdir(data_dir)\n\tf_raw = [f for f in flist if '.raw' in f]\n\tos.chdir(data_dir)\n\ti=1\n\n\tfor f in f_raw:\n\t\tprint(f)\n\t\toutput = assign_formula(esifile = f, times = times)\n\t\toutput['file'] = f\n\t\tresults.append(output)\n\t\ti = i + 1 \n\n\tfname = 'assignments.csv'\n\tdf = pd.concat(results)\n\tdf.to_csv(data_dir+fname)");
 
     let mut file = OpenOptions::new()
         .append(true)
