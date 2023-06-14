@@ -10,45 +10,6 @@ use bollard::errors::Error;
 use bollard::image::*;
 use bollard::Docker;
 
-use std::collections::HashMap;
-
-#[derive(PartialEq, Eq, Hash, Debug)]
-pub struct ParamIndex{
-    pub i: i32,
-}
-#[derive(Debug)]
-pub struct ParamValue<'a>{
-    pub py_param: &'a str,
-    pub value: &'a str,
-}
-
-pub type Parameters<'a> = HashMap<ParamIndex, ParamValue<'a>,>;
-
-
-#[derive(PartialEq, Eq, Hash, Debug)]
-pub struct ElementIndex{
-    pub i: i32,
-}
-#[derive(Debug)]
-pub struct ElementValue{
-    pub symbol: String,
-    pub range: String,
-}
-
-pub type Elements= HashMap<ElementIndex, ElementValue>;
-
-
-
-#[derive(PartialEq, Eq, Hash)]
-pub struct CalIndex{
-    pub i: i32,
-}
-#[derive(Debug)]
-pub struct CalValue{
-    pub py_param: String,
-    pub value: String,
-}
-pub type Calibtration = HashMap<CalIndex, CalValue>;
 
 
 

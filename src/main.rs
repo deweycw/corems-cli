@@ -5,7 +5,7 @@ use bollard::container::{
     RenameContainerOptions, ResizeContainerTtyOptions, RestartContainerOptions, StatsOptions,
     TopOptions, UpdateContainerOptions, UploadToContainerOptions, WaitContainerOptions,StopContainerOptions,
 };
-use bollard::Docker;
+use bollard::{API_DEFAULT_VERSION,Docker};
 use bollard::auth::DockerCredentials;
 
 use bollard::exec::{CreateExecOptions, ResizeExecOptions, StartExecResults};
@@ -18,46 +18,82 @@ use futures_util::{StreamExt, TryStreamExt};
 use std::io::{stdout, Read, Write};
 use std::time::Duration;
 use std::collections::HashMap;
-use std::env::{set_current_dir, current_dir};
+use std::env::{set_current_dir, current_dir, set_var};
 
-//#[cfg(not(windows))]
-//use termion::raw::IntoRawMode;
-//#[cfg(not(windows))]
-//use termion::{async_stdin, terminal_size};
 use tokio::io::AsyncWriteExt;
 use tokio::task::spawn;
 use tokio::time::sleep;
 
-use clap::Parser;
+use clap::{Parser};
 
 #[macro_use]
 pub mod common;
 use crate::common::*;
 
-pub mod write_py;
+mod assign;
+pub use crate::assign::*;
 
 
 const COREMS_IMAGE: &str = "deweycw/corems-cli";
 const DB_IMAGE: &str = "postgres";
 
 
-#[derive(Parser)]
-struct Cli {
-    path: std::path::PathBuf,
+#[derive(Parser,Default,Debug,)]
+struct Arguments {
+    module: String,
+    #[clap(default_value="corems.in",short, long)]
+    input_file: Option<String>,
+    #[clap(default_value="NO_REMOTE_HOST",short, long)]
+    remote_host: Option<String>,
+    #[clap(default_value="NO_PYTHON_SCRIPT",short, long)]
+    script: Option<String>,
 }
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
+
+
     let WORKING_DIR: std::path::PathBuf = current_dir().unwrap();
     set_current_dir(&WORKING_DIR).expect("Couldn't change into current directory.");
     let CWD: String = WORKING_DIR.into_os_string().into_string().unwrap();
-    let args = Cli::parse();
-    let content = std::fs::read_to_string(&args.path).expect("could not read file");
+
+    let args = Arguments::parse();
+
+    let module_arg: String = args.module;
+    let module = module_arg;
+
+    let path_arg: &Option<String> = &args.input_file;
+    let path_arg_deref = path_arg.as_deref().unwrap();
+    let input_file: std::path::PathBuf = std::path::PathBuf::from(path_arg_deref);
+
+    let remote_host_arg: &Option<String> = &args.remote_host;
+    let remote_host = remote_host_arg.as_deref().unwrap();
+
+    let script_arg: &Option<String> = &args.script;
+    let script = script_arg.as_deref().unwrap();
+
+    let mut exec_script = String::from("/CoreMS/usrdata/corems_input.py");
+
+    if module == String::from("assign") && script == String::from("NO_PYTHON_SCRIPT"){
+        let content = std::fs::read_to_string(input_file).expect("could not read input (.in) file");
+        //assign::cards::find_cards(&content);
+    } else if module == String::from("assign") && script != String::from("NO_PYTHON_SCRIPT"){
+        exec_script = String::from("/CoreMS/usrdata/");
+        exec_script.push_str(script);
+    } else {
+        println!("{module} is not a recognized coresms-cli module");
+    }
     
-    find_cards(&content);
+    let mut docker = Docker::connect_with_socket_defaults().unwrap();
 
-    let docker = Docker::connect_with_socket_defaults().unwrap();
+    if remote_host != String::from("NO_REMOTE_HOST") {
 
+        docker = Docker::connect_with_socket(remote_host,120,API_DEFAULT_VERSION).unwrap();
+
+  
+ 
+        
     let mut port_bindings = ::std::collections::HashMap::new();
     port_bindings.insert(
         String::from("8080/tcp"),
@@ -125,6 +161,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
     docker.start_container::<String>("corems-cli-molformdb-1", None).await?;
 
 
+
+
+
+
+
     // non interactive
     let exec = docker
         .create_exec(
@@ -132,7 +173,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
             CreateExecOptions {
                 attach_stdout: Some(true),
                 attach_stderr: Some(true),
-                cmd: Some(vec!["python3", "/CoreMS/usrdata/corems_input.py"]),
+                cmd: Some(vec!["python3", &exec_script]),
                 ..Default::default()
             },
         )
@@ -156,676 +197,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
     .await?;
 
 
-    Ok(())
+    
 }
 
-
-
-fn find_cards<'a>(content:&'a String) {
-    
-    let mut global_settings_card = false;
-    let mut calibration_card = false;
-    let mut rawfiles_card = false;
-    let mut time_binning_card = false;
-    let mut search_card = false;
-    let mut output_card = false;
-
-    for line in content.lines() {
-        if line.contains("GLOBAL_SETTINGS") {
-            global_settings_card = true;
-        } else if line.contains("CALIBRATION") {
-            calibration_card = true;
-        } else if line.contains("RAWFILES") {
-            rawfiles_card = true;
-        } else if line.contains("SEARCH") {
-            search_card = true;
-        } else if line.contains("TIME_BINNING") {
-            time_binning_card = true;
-        } else if line.contains("OUTPUT") {
-            output_card = true;
-        }
-    }
-    
-    if !global_settings_card {
-        println!("GLOBAL_SETTINGS card must be defined to proceed!");
-    }
-    //if !rawfiles_card {
-    //    println!("RAWFILES card must be defined to proceed!");
-    //} else {
-    //    read_rawfiles_card(&content);
-    // }
-
-    if !time_binning_card {
-        println!("TIME_BINNING card not found; all scans will be averaged.");
-    } else {
-        read_time_binning_card(&content);
-    }
-
-    if !search_card {
-        println!("SEARCH card must be defined to proceed!");
-    } 
-
-    if !calibration_card {
-        println!("CALIBRATION card must be defined to proceed!");
-    } else {
-        read_calibration_card(&content);
-    }
-
-    
-    let mut global_params: Parameters<'a> = read_global_settings_card(&content);
-    let mut assign_params_hash = read_search_card(&content);
-    let first_search = assign_params_hash.get(&1).unwrap();
-    let first_search_params = &first_search.params;
-    let first_elements = &first_search.elements;
-    
-    let cal_params = read_calibration_card(&content);
-    let time_params = read_time_binning_card(&content);
-
-    let num_assign = assign_params_hash.keys().len();
-
-    write_py::header();
-    write_py::assign_func_header();
-    write_py::global_params(global_params);
-    write_py::assign_chunk();
-    write_py::first_search_params(first_search_params);
-    write_py::first_elements(first_elements);
-    write_py::calibration_chunk(cal_params);
-    let mut first_hit:&str = "False";
-    write_py::run_search(&first_hit);
-    write_py::search_chunk();
-    if num_assign > 1 {
-        let it: i32 = num_assign as i32;
-        for a in 1..it {
-            first_hit = "True";
-            let i = a + 1;
-            let search = assign_params_hash.get(&i).unwrap();
-            let search_params = &search.params;
-            let elements = &search.elements;
-            write_py::next_search_params(search_params);
-            write_py::next_elements(elements); 
-            write_py::run_search(&first_hit); 
-            write_py::search_chunk();
-        } 
-    }
-    write_py::search_return();
-    write_py::py_main(time_params);
+Ok(())
 }
 
-
-fn read_calibration_card(content:&String) -> HashMap<&str,String> {
-    
-    ///set default values
-    
-    let mut ref_mass_list = "".to_string();
-    let mut cal_ppm_threshold = "(-3,3)".to_string();
-    let mut cal_snr_threshold = "3".to_string();
-    let mut holder = "";
-    let mut min_error = "-3";
-    let mut max_error = "3";
-    let mut string_bldr: Vec<String> = Vec::new();
-    let mut calfile = "";
-    
-    let card_split: Vec<&str> = content.split("CALIBRATION_SETTINGS").collect();
-    let cal_settings_card = card_split[1];
-    
-    let mut read_cal_card = false;
-    let mut snr_threshold_input = true;
-    let mut min_error_input = true;
-    let mut max_error_input = true;
-    let mut file_input = true;
-
-    for line in cal_settings_card.lines() {
-        if line.contains("CALIBRATION_SETTINGS") {
-            read_cal_card = true;
-        }
-
-        if line.contains("SNR_THRESHOLD") && snr_threshold_input{
-            let vec: Vec<&str> = line.split_whitespace().collect();
-            if vec.len() == 1 {
-                println!("SNR_THRESHOLD not defined. Using default setting.");   
-            } else {
-                cal_snr_threshold = vec[1].to_string();
-            }
-            snr_threshold_input = false;
-        }
-
-        if line.contains("MIN_PPM_ERROR") && min_error_input {
-            let vec: Vec<&str> = line.split_whitespace().collect();
-            if vec.len() == 1 {
-                println!("MIN_PPM_ERROR not defined. Using default setting.");
-            } else {
-                min_error = vec[1];
-            }
-            min_error_input = false;
-        }
-
-        if line.contains("MAX_PPM_ERROR") && max_error_input {
-            let vec: Vec<&str> = line.split_whitespace().collect();
-            if vec.len() == 1 {
-                println!("MAX_PPM_ERROR not defined. Using default setting.");
-            } else {
-                max_error = vec[1];
-            }
-            max_error_input = false;
-        }
-
-        if !min_error_input && !max_error_input {
-            let min = min_error.to_owned();
-            let max = max_error.to_owned();
-            string_bldr.push(min);
-            string_bldr.push(max);            
-        }
-
-        if line.contains("CAL_FILE") && file_input {
-            let vec: Vec<&str> = line.split_whitespace().collect();
-            if vec.len() == 1 {
-                println!("CAL_FILE not defined. Using default setting.");
-            } else {
-                calfile = vec[1];
-            }
-            file_input = false;
-        }
-
-    }
-
-    
-
-    let mut min = string_bldr[0].to_string();
-    let mut max = string_bldr[1].to_string();
-    let mut cal_range = "(".to_string();
-    cal_range.push_str(&min);
-    cal_range.push_str(",");
-    cal_range.push_str(&max);
-    cal_range.push_str(")");
-
-    let mut calfile_bldr: String = "'".to_owned();
-
-    calfile_bldr.push_str(calfile);
-    calfile_bldr.push_str("'");
-
-    let mut param_vec = vec![
-        ("calib_ppm_error_threshold",cal_range),
-        ("calib_snr_thrshold",cal_snr_threshold),
-        ("ref_mass_list",calfile_bldr),
-    ];
-    
-
-    let mut cal_params_hash: HashMap<_, _> = param_vec.into_iter().collect();
-
-    return cal_params_hash;
-
-}
-
-#[derive(Debug)]
-struct AssignParams<'a>{
-    pub params: common::Parameters<'a>,
-    pub elements: common::Elements,
-}
-
-fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>> {
-
-    let mut first_assign = true;
-    let card_split: Vec<&str> = content.split("SEARCH").collect();
-    let assign_card_grouped = card_split[1];
-
-    let assign_cards: Vec<&str> = assign_card_grouped.split("ASSIGNMENT").collect();
-    
-    fn get_assign_card_vals<'a>(card:&'a str) ->AssignParams<'a> {
-        let mut read_elements_card = false;
-        let mut read_filters_card = true;
-        let mut min_dbe = "0";
-        let mut max_dbe = "20";
-        let mut ion_charge = "1";
-        let mut ion_type_selected = false;
-        let mut is_radical = "False";
-        let mut is_protonated = "True";
-        let mut is_adduct = "False";
-        let mut oc_filter = "0";
-        let mut hc_filter = "0";
-        let mut element_vec = Vec::new();
-        let mut filters_vec = Vec::new();
-        let mut element_return = false;
-        let mut param_return = false;
-
-        for line in card.lines() {
-            let line_vec: Vec<&str> = line.split_whitespace().collect();
-            if line_vec.len() == 0 {
-                continue;
-            } else if line.contains("\n") {
-                continue;
-            } else {    
-                if line.contains("ELEMENTS") {
-                    read_elements_card = true;
-                    element_return = true;
-                }
-                if line.contains("FILTERS") {
-                    read_filters_card = false;
-                }
-                if line.contains("DBE") {
-                    let vec: Vec<&str> = line.split_whitespace().collect();
-                    if vec.len() == 1 {
-                        println!("DBE min and max not defined. Default values (min = 0, max = 20) will be used.");
-                    } else if vec.len() == 2{
-                        println!("Search will consider DBE between 0 and {}.",vec[1]);
-                        max_dbe = vec[1];
-                    } else {
-                        min_dbe = vec[1];
-                        max_dbe = vec[2];
-                    }
-                }
-                if line.contains("ION_CHARGE") {
-                    param_return = false;
-                    let vec: Vec<&str> = line.split_whitespace().collect();
-                    let temp = vec[1];
-                    let str_charge = temp.to_string();
-                    let int_charge = str_charge.parse::<i32>().unwrap();
-                    let abs_charge = int_charge.abs();
-                    if abs_charge > 3 {
-                        println!("Please re-define ION_CHARGE. Only values of +/-1 or +/-2 are valid.");
-                    } else {
-                        ion_charge = vec[1];
-                    }
-                }
-                if line.contains("PROTONATED") {
-                    let vec: Vec<&str> = line.split_whitespace().collect();
-                    let mut protonated_string = "True";
-                    if vec.len() == 1 {
-                        is_protonated = "True";
-                    } else{
-                        protonated_string = vec[1];
-                    }
-                    
-                    if protonated_string.contains("True"){
-                        is_protonated = "True";
-                    } else if protonated_string.contains("False"){
-                        is_protonated = "False"
-                    } else {
-                        println!("PROTONATED requires either True or False. Default value (True) will be used.");
-                        is_protonated = "True";
-                    }
-                    ion_type_selected = true;
-                }
-                if line.contains("RADICAL") {
-                    let vec: Vec<&str> = line.split_whitespace().collect();
-                    let mut radical_string = "True";
-                    if vec.len() == 1 {
-                        is_radical = "True";
-                    } else{
-                        radical_string = vec[1];
-                    }
-                    
-                    if radical_string.contains("True"){
-                        is_radical = "True";
-                    } else if radical_string.contains("False"){
-                        is_radical = "False"
-                    } else {
-                        println!("RADICAL requires either True or False. Default value (True) will be used.");
-                        is_radical = "True";
-                    }
-                    ion_type_selected = true;
-                }
-                if line.contains("ADDUCT") {
-                    let vec: Vec<&str> = line.split_whitespace().collect();
-                    let mut adduct_string = "True";
-                    if vec.len() == 1 {
-                        is_adduct = "True";
-                    } else{
-                        adduct_string = vec[1];
-                    }
-                    
-                    if adduct_string.contains("True"){
-                        is_adduct = "True";
-                    } else if adduct_string.contains("False"){
-                        is_adduct = "False"
-                    } else {
-                        println!("ADDUCT requires either True or False. Default value (True) will be used.");
-                        is_adduct = "True";
-                    }
-                    is_adduct = "True";
-                }
-
-                if read_elements_card {
-                    
-                    let vec_el: Vec<&str> = card.split("ELEMENTS").collect();
-                    let temp = vec_el[1];
-                    
-                    let elements_grp = temp.to_string();
-                    for l in elements_grp.lines() {
-                        let vec_el_2: Vec<&str> = l.split_whitespace().collect();
-                        
-                        if vec_el_2.len() < 2 && vec_el_2.len() > 1 {
-                            println!("Max and min number of each element must be specified!");
-                            continue;
-                        } else if !l.contains("/") && vec_el_2.len() > 0 {
-                            let element = vec_el_2[0].to_owned();
-                            let element_min = vec_el_2[1].to_owned();
-                            let element_max = vec_el_2[2].to_owned();
-                            let mut element_holder = Vec::new();
-                            element_holder.push(element);
-                            element_holder.push(element_min);
-                            element_holder.push(element_max);
-                            element_vec.push(element_holder);
-                        } else if l.contains("/") {
-                            read_elements_card = false;
-                            break;
-                        } else {
-                            continue;
-                        }
-                    }
-                }
-                read_filters_card = false;
-                if read_filters_card {
-                    println!("yes");
-                    let vec_f: Vec<&str> = card.split("FILTERS").collect();
-                    let tempf = vec_f[1];
-                    let filters_grp = tempf.to_string();
-                    for f in tempf.lines() {
-                        
-                        let vec_f2: Vec<&str> = f.split_whitespace().collect();
-
-                        if vec_f2.len() < 1 {
-                            continue;
-                        } else if f.contains("/") {
-                            read_filters_card = false;
-                            break;
-                        } else if vec_f2.len() == 1{
-                            let mut filter_holder = vec_f2[0].to_owned();
-                            let temp = vec_f2[0].to_owned();
-                            filters_vec.push(temp);
-                            filters_vec.push(filter_holder);
-                        } else {
-                            let mut filter_holder = vec_f2[1].to_owned();
-                            filters_vec.push(filter_holder);
-                        }
-                    }
-                    
-                }
-            }
-        }
-
-        let mut param_vec = vec![
-            ("min_dbe",min_dbe),
-            ("max_dbe",max_dbe),
-            ("ion_charge",ion_charge),
-            ("isRadical",is_radical),
-            ("isAdduct",is_adduct),
-            ("isProtonated",is_protonated),
-        ];
-
-        let search_params_hash = make_param_hash(&param_vec);
-
-        let mut elements_hash: common::Elements = HashMap::new();
-
-        let mut n: i32 = 0;
-
-        for e in element_vec {
-            let mut min = e[1].to_string();
-            let mut max = e[2].to_string();
-            let mut element_range = "(".to_string();
-            element_range.push_str(&min);
-            element_range.push_str(",");
-            element_range.push_str(&max);
-            element_range.push_str(")");
-
-            let mut py_element = "usedAtoms['".to_string();
-            py_element.push_str(&e[0]);
-            py_element.push_str("']");
-
-            let element_index = ElementIndex {
-                i: n,
-            };            
-
-            let element_value = ElementValue {
-                symbol: py_element,
-                range: element_range,
-            };
-            elements_hash.insert(element_index, element_value);
-            n = n + 1;
-        
-        }
-
-        let param_set = AssignParams {
-            params: search_params_hash,
-            elements: elements_hash,
-        };       
-        return param_set
-    }
-    
-    let mut param_hash: HashMap<i32,AssignParams> = HashMap::new();
-
-    let mut k: i32 = 1;
-    for card in assign_cards {
-        let card_vec: Vec<&str> = card.split_whitespace().collect();
-
-        if card_vec.len() > 1{
-            let card_vals = get_assign_card_vals(card);
-            param_hash.insert(k, card_vals);
-            k = k + 1;
-        }
-    };
-
-    return param_hash;
-}
-
-fn read_time_binning_card(content:&String) -> HashMap<&str,&str> {
-    
-    let mut interval = "2";
-    let mut time_min = "0";
-    let mut time_max = "2";
-    let mut time_range_check = false; 
-
-    let card_split: Vec<&str> = content.split("TIME_BINNING").collect();
-    let time_binning_card = card_split[1];
-    
-    for line in time_binning_card.lines() {
-        if line.contains("INTERVAL") {
-            let vec: Vec<&str> = line.split_whitespace().collect();
-            if vec.len() == 1 {
-                println!("INTERVAL is not set. Using default value of 2.0 min.")
-            } else{
-                interval = vec[1];   
-            }
-        }
-        if line.contains("TIME_RANGE") {
-            time_range_check = true;
-            let vec: Vec<&str> = line.split_whitespace().collect();
-            if vec.len() == 1 {
-                println!("TIME_RANGE is not defined. Please define TIME_RANGE before proceeding.")
-            } else {
-                time_min = vec[1];
-                time_max = vec[2];
-            }
-        }
-    }
-
-
-    let mut param_vec = vec![
-        ("time_min",time_min),
-        ("time_max",time_max),
-        ("interval",interval),
-    ];
-    
-    let mut time_params_hash: HashMap<_, _> = param_vec.into_iter().collect();
-
-    return time_params_hash;
-
-}
-
-
-fn read_rawfiles_card(content:&String) {
-    
-    let mut read_card = false;
-    
-    for line in content.lines() {
-        if line.contains("RAWFILES") {
-            read_card = true;
-            let vec: Vec<&str> = line.split_whitespace().collect();
-            if vec.len() == 1 {
-                println!("Location of raw data files is not set. Please set with RAWFILES card.")
-            } else {
-                let rawfiles_dir = vec[1];
-            }
-        }
-    }
-
-    if !read_card {
-        println!("Location of raw data files is not set. Please set with RAWFILES card.")
-    }
-}
-
-
-fn read_global_settings_card<'a>(content:&'a String) -> Parameters<'a> {
-    
-    ///set default values
-    
-    let mut error_method = "'s2n'";
-    let mut min_ppm_error = "UNDEFINED";
-    let mut max_ppm_error = "UNDEFINED";
-    let mut threshold_method = "'signal_noise'";
-    let mut s2n_threshold = "3";
-    let mut min_prominence = "0.1";
-    let mut score_method = "'prob_score'";
-    let mut output_score_method = "'prob_score'";
-    
-    let card_split: Vec<&str> = content.split("GLOBAL_SETTINGS").collect();
-    let global_settings_card = card_split[1];
-    
-    let mut read_error_card = false;
-    let mut read_thresholding_card = false;
-    
-    let mut score_method_input = true;
-    let mut output_score_method_input = true;
-
-    for line in global_settings_card.lines() {
-        if line.contains("ERROR_SETTINGS") {
-            read_error_card = true;
-        }
-        
-        if line.contains("THRESHOLDING") {
-            read_thresholding_card = true;
-        }
-        
-        if line.contains("SCORE_METHOD") && score_method_input {
-            let vec: Vec<&str> = line.split_whitespace().collect();
-            if vec.len() == 1 {
-                println!("SCORE_METHOD not defined. Using default setting.");   
-            } else {
-                score_method = vec[1];
-            }
-            score_method_input = false;
-        }
-
-        if line.contains("OUTPUT_SCORE_METHOD") && output_score_method_input {
-            let vec: Vec<&str> = line.split_whitespace().collect();
-            if vec.len() == 1 {
-                println!("OUTPUT_SCORE_METHOD not defined. Using default setting.");
-            } else {
-                output_score_method = vec[1];
-            }
-            output_score_method_input = false;
-        }
-
-        if read_error_card {
-            if line.contains("ERROR_METHOD"){
-                let vec: Vec<&str> = line.split_whitespace().collect();
-                if vec.len() == 1 {
-                    println!("ERROR_METHOD not defined. Using default setting.");
-                } else {
-                    error_method = vec[1];
-                }
-            }
-            if line.contains("MIN_PPM_ERROR"){
-                let vec: Vec<&str> = line.split_whitespace().collect();
-                if vec.len() == 1 {
-                    println!("MIN_PPM_ERROR not defined. This parameter must be defined to perform serach.")
-                } else{
-                    min_ppm_error = vec[1]; 
-                }
-            }
-            if line.contains("MAX_PPM_ERROR") {
-                let vec: Vec<&str> = line.split_whitespace().collect();
-                if vec.len() == 1 {
-                    println!("MAX_PPM_ERROR not defined. Using default setting.")
-                } else {
-                    max_ppm_error = vec[1];
-                }
-            }
-            if line.contains("/") {
-                read_error_card = false;
-            }
-        }
-
-        if read_thresholding_card {
-            if line.contains("THRESHOLD_METHOD") {
-                let vec: Vec<&str> = line.split_whitespace().collect();
-                if vec.len() == 1 {
-                    println!("THRESHOLD_METHOD not defined. Using default setting.");
-                } else {
-                    threshold_method = vec[1];
-                }
-            }
-            if line.contains("S2N_THRESHOLD") {
-                let vec: Vec<&str> = line.split_whitespace().collect();
-                if vec.len() == 1 {
-                    println!("S2N_THRESHOLD not defined. Using default setting.");
-                } else {
-                    s2n_threshold = vec[1];
-                }
-            }
-            if line.contains("MIN_PROMINENCE") {
-                let vec: Vec<&str> = line.split_whitespace().collect();
-                if vec.len() == 1 {
-                    println!("MIN_PROMINENCE not defined. Using default setting.");
-                } else {
-                    min_prominence = vec[1]
-                }
-            }
-            if line.contains("/") {
-                read_thresholding_card = false;
-            }
-        }
-    }
-
-    let mut param_vec = vec![
-        ("error_method",error_method),
-        ("min_ppm_error",min_ppm_error),
-        ("max_ppm_error",max_ppm_error),
-        ("threshold_method",threshold_method),
-        ("s2n_threshold",s2n_threshold),
-        ("score_method",score_method),
-        ("output_score_method",output_score_method)
-    ];
-
-    let global_params_hash = make_param_hash(&param_vec);
-
-    return global_params_hash;
-
-}
-
-fn make_param_hash<'a>(param_vector: &Vec<(&'a str, &'a str)>) -> common::Parameters<'a> {
-
-    let mut params_hash: common::Parameters = HashMap::new();
-
-    let mut i: i32 = 0;
-
-    for tuple in param_vector.iter() {
-        let pname: &str = tuple.0;
-        let pvalue: &str = tuple.1;
-        let line_order = i;
-
-        let param_index = ParamIndex {
-            i: line_order,
-        };            
-
-        let param_value = ParamValue {
-            py_param: pname,
-            value: pvalue,
-        };
-
-        params_hash.insert(param_index, param_value);
-        i = i + 1;
-
-    }
-
-    return params_hash;
-}

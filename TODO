@@ -1,0 +1,10 @@
+FEATURES TO ADD
+
+13 June 2023:
+- connection to remote host docker 
+- selection of python script for input file
+- run named input file 
+- change run cammand to corems-cli assign [-f/--file -s/--script -r/--remote-host]
+- how to make downloads trustworthy?
+- how to prompt for admin credentials during install?
+- how to kill container if terminal closed?

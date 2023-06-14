@@ -6,8 +6,8 @@ use std::env;
 use std::path::Path;
 
 
-#[macro_use]
 
+use crate::assign::cards::common_card::*;
 //const WORKING_DIR = get_current_working_dir();
 
 
@@ -15,9 +15,8 @@ const INPUT_FILE: &str = "corems_input.py";
 
 
 
-use crate::common::*;
 
-fn _write_to_file<'a>(preamble:&str,params_hash:&Parameters<'a>) {
+pub fn _write_to_file<'a>(preamble:&str,params_hash:&Parameters<'a>) {
     let mut file = OpenOptions::new()
         .append(true)
         .open(INPUT_FILE)
@@ -45,7 +44,7 @@ fn _write_to_file<'a>(preamble:&str,params_hash:&Parameters<'a>) {
 
 
 
-pub fn header() {
+pub fn write_header() {
     let header = "import os\nfrom tempfile import tempdir\nimport time\nimport numpy as np\nimport warnings\nfrom datetime import date, datetime\nimport pandas as pd\n\nwarnings.filterwarnings('ignore')\nfrom pathlib import Path\nimport sys\nsys.path.append('./')\n\nos.chdir('/CoreMS')\nfrom corems.mass_spectra.input import rawFileReader\nfrom corems.molecular_id.factory.classification import HeteroatomsClassification, Labels\nfrom corems.molecular_id.search.priorityAssignment import OxygenPriorityAssignment\nfrom corems.molecular_id.search.molecularFormulaSearch import SearchMolecularFormulas\nfrom corems.encapsulation.factory.parameters import MSParameters\nfrom corems.encapsulation.constant import Atoms\nfrom corems.mass_spectrum.calc.Calibration import MzDomainCalibration\n#import corems.lc_icpms_ftms.calc.lc_icrms_qc_assign as icrms\n#import corems.lc_icpms_ftms.calc.lc_icrms_helpers as lcmsfns\nos.chdir('/CoreMS/usrdata')\n";
     let mut file = OpenOptions::new()
         .write(true)
@@ -54,7 +53,7 @@ pub fn header() {
     fs::write(INPUT_FILE,header).expect("File not written");
  }
 
-pub fn global_params<'a>(global_params_hash:Parameters<'a>) {
+pub fn write_global_params<'a>(global_params_hash:Parameters<'a>) {
     let preamble = "\tMSParameters.molecular_search.";
     let mut file = OpenOptions::new()
         .append(true)
@@ -66,7 +65,7 @@ pub fn global_params<'a>(global_params_hash:Parameters<'a>) {
     _write_to_file(preamble,&global_params_hash);
 }
 
-pub fn first_search_params<'a>(search_params_hash:&Parameters<'a>) {
+pub fn write_first_search_params<'a>(search_params_hash:&Parameters<'a>) {
     let preamble = "\t\tMSParameters.molecular_search.";
     let mut file = OpenOptions::new()
         .append(true)
@@ -78,7 +77,7 @@ pub fn first_search_params<'a>(search_params_hash:&Parameters<'a>) {
     _write_to_file(preamble,&search_params_hash);
 }
 
-pub fn next_search_params<'a>(search_params_hash:&Parameters<'a>) {
+pub fn write_next_search_params<'a>(search_params_hash:&Parameters<'a>) {
     let preamble = "\t\tMSParameters.molecular_search.";
     let mut file = OpenOptions::new()
         .append(true)
@@ -92,7 +91,7 @@ pub fn next_search_params<'a>(search_params_hash:&Parameters<'a>) {
 
 
 
-pub fn first_elements(elements_hash:&Elements) {
+pub fn write_first_elements(elements_hash:&Elements) {
     
     let preamble = "\t\tMSParameters.molecular_search.";
     let mut file = OpenOptions::new()
@@ -121,7 +120,7 @@ pub fn first_elements(elements_hash:&Elements) {
 }
 
 
-pub fn next_elements(elements_hash:&Elements) {
+pub fn write_next_elements(elements_hash:&Elements) {
     
     let preamble = "\t\tMSParameters.molecular_search.";
     let mut file = OpenOptions::new()
@@ -150,7 +149,7 @@ pub fn next_elements(elements_hash:&Elements) {
 }
 
 
-pub fn assign_func_header() {
+pub fn write_assign_func_header() {
     let preamble = "\n\ndef assign_formula(esifile, times):";
     
     let mut file = OpenOptions::new()
@@ -163,7 +162,7 @@ pub fn assign_func_header() {
     writeln!(&file,"{newline}");
 }
 
-pub fn run_search(first_hit: &str) {
+pub fn write_run_search(first_hit: &str) {
     let preamble = "\n\t\tSearchMolecularFormulas(mass_spectrum,first_hit = ";
     
     let mut file = OpenOptions::new()
@@ -177,7 +176,7 @@ pub fn run_search(first_hit: &str) {
     writeln!(&file,"{newline}");
 }
 
-pub fn assign_chunk() {
+pub fn write_assign_chunk() {
     let preamble = "\n\tMSParameters.mass_spectrum.threshold_method = 'signal_noise'\n\tMSParameters.mass_spectrum.s2n_threshold = 3\n\n\tparser = rawFileReader.ImportMassSpectraThermoMSFileReader(esifile)\n\n\ttic=parser.get_tic(ms_type='MS')[0]\n\ttic_df=pd.DataFrame({'time': tic.time,'scan': tic.scans})\n\tresults = []\n\n\tfor timestart in times:\n\n\t\tscans=tic_df[tic_df.time.between(timestart,timestart+interval)].scan.tolist()\n\t\tmass_spectrum = parser.get_average_mass_spectrum_by_scanlist(scans) ";
     
     let mut file = OpenOptions::new()
@@ -190,7 +189,7 @@ pub fn assign_chunk() {
     writeln!(&file,"{newline}");
 }
 
-pub fn search_chunk() {
+pub fn write_search_chunk() {
 
     let preamble = "\n\n\t\tmass_spectrum.percentile_assigned(report_error=True)\n\t\tassignments=mass_spectrum.to_dataframe()\n\t\tassignments['Time']=timestart\n\t\tresults.append(assignments)";
 
@@ -204,7 +203,7 @@ pub fn search_chunk() {
     writeln!(&file,"{newline}");
 }
 
-pub fn search_return() {
+pub fn write_search_return() {
 
     let preamble = "\n\n\tresults=pd.concat(results,ignore_index=True)\n\n\treturn(results)";
 
@@ -219,7 +218,7 @@ pub fn search_return() {
 }
 
 
-pub fn calibration_chunk(cal_params_hash: HashMap<&str, String>) {
+pub fn write_calibration_chunk(cal_params_hash: HashMap<&str, String>) {
     let preamble = "\n\t\t# calibration settings\n\t\tmass_spectrum.settings.min_calib_ppm_error = -10\n\t\tmass_spectrum.settings.max_calib_ppm_error = 10\n\t\trefmasslist = ";
     
     let mut file = OpenOptions::new()
@@ -246,7 +245,7 @@ pub fn calibration_chunk(cal_params_hash: HashMap<&str, String>) {
 }
 
 
-pub fn py_main(time_params_hash:HashMap<&str,&str>) {
+pub fn write_py_main(time_params_hash:HashMap<&str,&str>) {
 
     let func_body = "\n\n\nif __name__ == '__main__':\n\n\tdata_dir = '/CoreMS/usrdata/'\n\tresults = []\n\n\tinterval = ";
 

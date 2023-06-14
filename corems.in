@@ -1,0 +1,96 @@
+## CoreMS input file 
+
+##============= CALIBRATE =============
+CALIBRATION_SETTINGS
+    SNR_THRESHOLD   3
+    MIN_PPM_ERROR   -3
+    MAX_PPM_ERROR   3
+    CAL_FILE        mz_ref.db
+/
+
+##============== GLOBAL PARAMS ==========
+GLOBAL_SETTINGS
+    ERROR_SETTINGS
+        ERROR_METHOD None
+        MIN_PPM_ERROR -0.25
+        MAX_PPM_ERROR 0.25
+    /
+    THRESHOLDING
+        THRESHOLD_METHOD   'signal_noise'
+        S2N_THRESHOLD      5
+        MIN_PROMINENCE     0.01
+    /
+    SCORE_METHOD           'prob_score'
+    OUTPUT_SCORE_METHOD    'prob_score'
+/
+
+##============= TIME BINNING =============
+TIME_BINNING
+    TIME_RANGE 0 28
+    INTERVAL 2
+/
+
+##==============ASSIGN==========
+SEARCH
+    ASSIGNMENT
+        ELEMENTS
+            C 1 50    
+            H 4 100
+            O 0 20
+            N 0 4
+            S 0 1
+            Si 0 10
+            Cu 0 1
+        /
+        DBE 0 20
+        ION_CHARGE 1
+        PROTONATED True
+        FILTERS
+            OC_FILTER
+            HC_FILTER
+        /
+    /
+
+    ASSIGNMENT
+        ELEMENTS
+            C 1 50    
+            H 4 100
+            O 0 20
+            N 0 4
+            S 0 1
+            Si 0 10
+            Cu 0 10
+        /
+        DBE 0 40
+        ION_CHARGE 2
+        PROTONATED True
+        ADDUCT True
+        FILTERS
+            OC_FILTER
+            HC_FILTER
+        /
+    /
+
+
+    ASSIGNMENT
+        ELEMENTS
+            C 1 50    
+            H 4 100
+            O 0 20
+
+        /
+        DBE 0 20
+        ION_CHARGE 3
+        PROTONATED True
+        ADDUCT False
+        RADICAL False
+        FILTERS
+            OC_FILTER
+            HC_FILTER
+        /
+    /
+/
+
+
+
+
