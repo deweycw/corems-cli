@@ -84,6 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
     } else if module == String::from("assign") && script != String::from("NO_PYTHON_SCRIPT"){
         exec_script = String::from("/CoreMS/usrdata/");
         exec_script.push_str(script);
+        println!("{exec_script}");
     } else {
         println!("{module} is not a recognized coresms-cli module");
     }
@@ -130,8 +131,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
         .try_collect::<Vec<_>>()
         .await?;
         
-    let container_name_arg: &Option<String> = &args.script;
+    let container_name_arg: &Option<String> = &args.container;
     let CONTAINER_NAME = container_name_arg.as_deref().unwrap();
+
 
     let corems_id = &docker
         .create_container(
@@ -152,6 +154,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
     docker.start_container::<String>(&corems_id, None).await?;
 
 
+
     let connect_network_options = ConnectNetworkOptions {
         container: CONTAINER_NAME,
         endpoint_config: EndpointSettings {
@@ -161,7 +164,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
 
     docker.connect_network("corems-cli_default", connect_network_options).await?;
 
-    let database_arg: &Option<String> = &args.script;
+    let database_arg: &Option<String> = &args.database;
     let DATABASE = database_arg.as_deref().unwrap();
 
     docker.start_container::<String>(DATABASE, None).await?;
