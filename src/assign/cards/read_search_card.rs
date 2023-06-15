@@ -71,7 +71,7 @@ pub fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>
                         ion_charge = vec[1];
                     }
                 }
-                if line.contains("PROTONATED") {
+                if line.contains("(DE)PROTONATED") {
                     let vec: Vec<&str> = line.split_whitespace().collect();
                     let mut protonated_string = "True";
                     if vec.len() == 1 {
@@ -85,7 +85,7 @@ pub fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>
                     } else if protonated_string.contains("False"){
                         is_protonated = "False"
                     } else {
-                        println!("PROTONATED requires either True or False. Default value (True) will be used.");
+                        println!("(DE)PROTONATED requires either True or False. Default value (True) will be used.");
                         is_protonated = "True";
                     }
                     ion_type_selected = true;
