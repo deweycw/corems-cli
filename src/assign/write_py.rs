@@ -2,8 +2,6 @@ use std::fs;
 use std::io::Write;
 use std::fs::OpenOptions;
 use std::collections::HashMap;
-use std::env;
-use std::path::Path;
 
 
 
@@ -12,8 +10,6 @@ use crate::assign::cards::common_card::*;
 
 
 const INPUT_FILE: &str = "corems_input.py";
-
-
 
 
 pub fn _write_to_file<'a>(preamble:&str,params_hash:&Parameters<'a>) {

@@ -1,209 +1,182 @@
-use bollard::container::{
-    AttachContainerOptions, AttachContainerResults, Config, CreateContainerOptions,
-    DownloadFromContainerOptions, InspectContainerOptions, KillContainerOptions,
-    ListContainersOptions, LogsOptions, PruneContainersOptions, RemoveContainerOptions,
-    RenameContainerOptions, ResizeContainerTtyOptions, RestartContainerOptions, StatsOptions,
-    TopOptions, UpdateContainerOptions, UploadToContainerOptions, WaitContainerOptions,StopContainerOptions,
-};
-use bollard::{API_DEFAULT_VERSION,Docker};
-use bollard::auth::DockerCredentials;
+use bollard::container::{RemoveContainerOptions};
+use bollard::{Docker};
+use bollard::image::{ RemoveImageOptions};
+use bollard::volume::{RemoveVolumeOptions};
 
-use bollard::exec::{CreateExecOptions, ResizeExecOptions, StartExecResults};
-use bollard::image::{CreateImageOptions, PushImageOptions, TagImageOptions};
-use bollard::network::{ConnectNetworkOptions, ListNetworksOptions, CreateNetworkOptions, InspectNetworkOptions};
-use bollard::volume::{CreateVolumeOptions};
-use bollard::models::*;
+use std::env::{set_current_dir, current_dir};
+use std::path::PathBuf;
 
-use futures_util::{StreamExt, TryStreamExt};
-use std::io::{stdout, Read, Write};
-use std::time::Duration;
-use std::collections::HashMap;
-use std::env::{set_current_dir, current_dir, set_var};
-
-use tokio::io::AsyncWriteExt;
-use tokio::task::spawn;
-use tokio::time::sleep;
-
-use clap::{Parser};
-
-#[macro_use]
-pub mod common;
-use crate::common::*;
+use clap::{Parser, Subcommand, Args, ValueEnum};
 
 mod assign;
 use crate::assign::find_cards::*;
+mod container_env;
+use crate::container_env::Load_Container_Env::*; 
 
-const COREMS_IMAGE: &str = "deweycw/corems-cli";
-const DB_IMAGE: &str = "postgres";
+use futures::executor::block_on;
 
-
-#[derive(Parser,Default,Debug,)]
-struct Arguments {
-    module: String,
-    #[clap(default_value="corems.in",short, long)]
-    input_file: Option<String>,
-    #[clap(default_value="NO_REMOTE_HOST",short, long)]
+#[derive(Parser)]
+#[command(name = "corems-cli")]
+#[command(author = "Christian Dewey <dewey.christian@gmail.com>")]
+#[command(version = "beta")]
+#[command(about = "command line tool for formula assignments with CoreMS",long_about = "This tool leverages CoreMS (https://github.com/EMSL-Computing/CoreMS; Yuri E. Corilo, William R. Kew, Lee Ann McCue (2021, March 27). EMSL-Computing/CoreMS: CoreMS 1.0.0 (Version v1.0.0), as developed on Github. Zenodo. http://doi.org/10.5281/zenodo.4641553), a comprehensive Python framework for analysis of high resolution ESI mass spectrometry data. The tool creates a containerized deployment of CoreMS and facilitates communication between the user's local system and the CoreMS container. Assignment parameters are defined in a text-based input file or a user-provided Python script. The user runs the tool within a directory containing the raw MS data files (.RAW), the input file or Python script, and a peak list for calibration. A .csv file with assignment results is generated and saved within the directory containing the raw files.")]
+#[command(propagate_version = true)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+    ///remote host of container environment; not currently implemented
+    #[clap(default_value="None", long)]
     remote_host: Option<String>,
-    #[clap(default_value="NO_PYTHON_SCRIPT",short, long)]
-    script: Option<String>,
-    #[clap(default_value="corems-cli",short, long)]
-    container: Option<String>,
-    #[clap(default_value="corems-cli-molformdb-1",short, long)]
-    database: Option<String>,
+    /// CoreMS image for building CoreMS container
+    #[arg(default_value="deweycw/corems-cli", long)]
+    corems_image: Option<String>,
+    /// CoreMS container to use for assignments
+    #[arg(default_value="corems-cli", long)]
+    corems_container: Option<String>,
+    /// Database container to pair with container
+    #[arg(default_value="corems-cli-molformdb-1", long)]
+    db_container: Option<String>,
+    /// Database volume to pair with container
+    #[arg(default_value="corems-cli_db-volume", long)]
+    db_volume: Option<String>,
+
 }
 
+#[derive(Subcommand)]
+enum Commands {
+    /// Runs formula assignment, per parameters defined in input file, on raw data files within the working directory
+    Assign(AssignArgs),
+    /// Deletes, pulls, and rebuilds container environment; extent of reset can be specified
+    Reload(ReloadArgs),
+}
+
+#[derive(Args)]
+#[group(required = false, multiple = false)]
+struct AssignArgs {
+    /// text-based input file defining assignment parameters
+    #[arg(default_value="corems.in",short, long)]
+    input_file: Option<PathBuf>,
+    /// user-generated Python script defining assignment parameters
+    #[arg(default_value="None",short, long)]
+    script: Option<String>,
+}
+
+#[derive(Args)]
+struct ReloadArgs {
+    #[arg(value_enum,required = true)]
+    extent: Reload,
+    /// Docker image to use in rebuild
+    #[arg(default_value="deweycw/corems-cli", short, long)]
+    pull_image: Option<String>,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum Reload {
+    /// Deletes Postgres image, database volume, and CoreMS image; pulls new images from DockerHub.
+    All,
+    /// Deletes and pulls CoreMS image only; new image can be specified with --pull-image option.
+    Corems,
+    /// Deletes database volume. 
+    Database,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
 
+    let working_dir: std::path::PathBuf = current_dir().unwrap();
+    set_current_dir(&working_dir).expect("Couldn't change into current directory.");
+    let cwd: String = working_dir.into_os_string().into_string().unwrap();
 
-    let WORKING_DIR: std::path::PathBuf = current_dir().unwrap();
-    set_current_dir(&WORKING_DIR).expect("Couldn't change into current directory.");
-    let CWD: String = WORKING_DIR.into_os_string().into_string().unwrap();
+    let cli = Cli::parse();
 
-    let args = Arguments::parse();
+    let corems_container_arg: &Option<String> = &cli.corems_container;
+    let db_container_arg: &Option<String> = &cli.db_container;
+    let corems_image_arg: &Option<String> = &cli.corems_image;
+    let db_volume_arg: &Option<String> = &cli.db_volume;
 
-    let module_arg: String = args.module;
-    let module = module_arg;
+    let corems_container = corems_container_arg.as_ref().unwrap();
+    let db_container = db_container_arg.as_ref().unwrap();
+    let corems_image = corems_image_arg.as_ref().unwrap();
+    let db_volume = db_volume_arg.as_ref().unwrap();
 
-    let path_arg: &Option<String> = &args.input_file;
-    let path_arg_deref = path_arg.as_deref().unwrap();
-    let input_file: std::path::PathBuf = std::path::PathBuf::from(path_arg_deref);
-
-    let remote_host_arg: &Option<String> = &args.remote_host;
-    let remote_host = remote_host_arg.as_deref().unwrap();
-
-    let script_arg: &Option<String> = &args.script;
-    let script = script_arg.as_deref().unwrap();
-
+    let mut content = String::from("empty");
     let mut exec_script = String::from("/CoreMS/usrdata/corems_input.py");
 
-    if module == String::from("assign") && script == String::from("NO_PYTHON_SCRIPT"){
-        let content = std::fs::read_to_string(input_file).expect("could not read input (.in) file");
-        find_cards(&content);
-    } else if module == String::from("assign") && script != String::from("NO_PYTHON_SCRIPT"){
-        exec_script = String::from("/CoreMS/usrdata/");
-        exec_script.push_str(script);
-        println!("{exec_script}");
-    } else {
-        println!("{module} is not a recognized coresms-cli module");
-    }
+    let docker = Docker::connect_with_socket_defaults().unwrap();
+
     
-    let mut docker = Docker::connect_with_socket_defaults().unwrap();
 
-    //if remote_host != String::from("NO_REMOTE_HOST") {
+    match &cli.command {
 
-    //    docker = Docker::connect_with_socket(remote_host,120,API_DEFAULT_VERSION).unwrap();
+        Commands::Assign(input_file) => {
+            let input_file_arg: &Option<PathBuf> = &input_file.input_file;
+            content = std::fs::read_to_string(input_file_arg.as_deref().unwrap()).expect("could not read input (.in) file");
+            find_cards(&content);
+            load_container(&docker,  &corems_container, &db_container, &corems_image, &exec_script, &cwd).await?;
+           
+        }
 
-  
-    let mut port_bindings = ::std::collections::HashMap::new();
-    port_bindings.insert(
-        String::from("8080/tcp"),
-        Some(vec![PortBinding {
-            host_ip: Some(String::from("127.0.0.1")),
-            host_port: Some(String::from("8080")),
-        }]),
-    );
-
-
-    let host_config = HostConfig {
-        mounts: Some(vec![Mount {
-            target: Some(String::from("/CoreMS/usrdata")),
-            source: Some(String::from(CWD)),
-            typ: Some(MountTypeEnum::BIND),
-            consistency: Some(String::from("default")),
-            ..Default::default()
-        }]),
-        port_bindings: Some(port_bindings),
-        ..Default::default()
-    };
+        Commands::Assign(script) => {
+            let script_arg: &Option<String> = &script.script;
+            if script_arg.as_deref().unwrap() != String::from("None") {
+                exec_script = String::from("/CoreMS/usrdata/");
+                exec_script.push_str(script_arg.as_deref().unwrap());
+                println!("{exec_script}");
+                load_container(&docker,  &corems_container, &db_container, &corems_image, &exec_script, &cwd).await?;
+            } 
+        }
 
 
-    docker
-        .create_image(
-            Some(CreateImageOptions {
-                from_image: COREMS_IMAGE,
+        Commands::Reload(all) => {
+            let options = Some(RemoveContainerOptions{
+                force: true,
+                v: true,
                 ..Default::default()
-            }),
-            None,
-            None, 
-        )
-        .try_collect::<Vec<_>>()
-        .await?;
+            });
+    
+            let _ = docker.remove_container(&corems_container,options).await?;
+            let _ = docker.remove_container(&db_container,options).await?;
+    
+            let remove_options = Some(RemoveImageOptions {
+                force: true,
+                ..Default::default()
+            });
+            
+            let _ = docker.remove_image("postgres", remove_options, None).await;
+            let _ = docker.remove_image(&corems_image, remove_options, None).await;
+
+            let remove_options = Some(RemoveVolumeOptions {
+                force: true,
+            });
+            
+            let _ = docker.remove_volume(&db_volume, remove_options).await?;
+        }
+
+        Commands::Reload(corems) => {
+            let options = Some(RemoveContainerOptions{
+                force: true,
+                v: true,
+                ..Default::default()
+            });
+    
+            let _ = docker.remove_container(&corems_container,options).await?;
         
-    let container_name_arg: &Option<String> = &args.container;
-    let CONTAINER_NAME = container_name_arg.as_deref().unwrap();
-
-
-    let corems_id = &docker
-        .create_container(
-            Some(CreateContainerOptions {
-                name: CONTAINER_NAME,
-                platform: Some("linux/amd64"),
-            }),
-            Config {
-                image:Some(COREMS_IMAGE),
-                tty: Some(true),
-                host_config: Some(host_config),
+            let remove_options = Some(RemoveImageOptions {
+                force: true,
                 ..Default::default()
-            },
-        )
-        .await?
-        .id;
-
-    docker.start_container::<String>(&corems_id, None).await?;
-
-
-
-    let connect_network_options = ConnectNetworkOptions {
-        container: CONTAINER_NAME,
-        endpoint_config: EndpointSettings {
-            ..Default::default()
+            });
+            
+            let _ = docker.remove_image(&corems_image, remove_options, None).await?;
         }
-    };
 
-    docker.connect_network("corems-cli_default", connect_network_options).await?;
-
-    let database_arg: &Option<String> = &args.database;
-    let DATABASE = database_arg.as_deref().unwrap();
-
-    docker.start_container::<String>(DATABASE, None).await?;
-
-
-
-
-
-
-
-    // non interactive
-    let exec = docker
-        .create_exec(
-            &corems_id,
-            CreateExecOptions {
-                attach_stdout: Some(true),
-                attach_stderr: Some(true),
-                cmd: Some(vec!["python3", &exec_script]),
-                ..Default::default()
-            },
-        )
-        .await?
-        .id;
-    if let StartExecResults::Attached { mut output, .. } = docker.start_exec(&exec, None).await? {
-        while let Some(Ok(msg)) = output.next().await {
-            print!("{}", msg);
+        Commands::Reload(database) => {
+            let remove_options = Some(RemoveVolumeOptions {
+                force: true,
+            });
+            
+            let _ = docker.remove_volume(&db_volume, remove_options).await?;
         }
-    } else {
-        unreachable!();
     }
-    docker
-    .remove_container(
-        &corems_id,
-        Some(RemoveContainerOptions {
-            force: true,
-            ..Default::default()
-        }),
-    )
-    .await?;
 
 Ok(())
 }

@@ -1,11 +1,5 @@
-use std::io::{stdout, Read, Write};
-use std::time::Duration;
 use std::collections::HashMap;
-use std::env::{set_current_dir, current_dir};
 
-use crate::assign::cards::common_card::*;
-
-#[macro_use]
 pub fn read_time_binning_card(content:&String) -> HashMap<&str,&str> {
     
     let mut interval = "2";

@@ -1,15 +1,5 @@
-use std::io::{stdout, Read, Write};
-use std::collections::HashMap;
-
-#[macro_use]
 use crate::assign::write_py::*;
-
 use crate::assign::cards::*;
-use crate::assign::find_cards::read_search_card::*;
-use crate::assign::find_cards::read_global_settings_card::*;
-use crate::assign::find_cards::read_calibration_card::*;
-use crate::assign::find_cards::read_time_binning_card::*;
-use crate::assign::find_cards::common_card::*;
 
 pub fn find_cards<'a>(content:&'a String) {
     

@@ -1,16 +1,8 @@
-use std::io::{stdout, Read, Write};
-use std::time::Duration;
-use std::collections::HashMap;
-use std::env::{set_current_dir, current_dir};
-
-
-#[macro_use]
-//pub mod cards;
 use crate::assign::cards::common_card::*;
 
 pub fn read_global_settings_card<'a>(content:&'a String) -> Parameters<'a> {
     
-    ///set default values
+    //set default values
     
     let mut error_method = "'s2n'";
     let mut min_ppm_error = "UNDEFINED";

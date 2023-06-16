@@ -1,14 +1,8 @@
-use std::io::{stdout, Read, Write};
-use std::time::Duration;
 use std::collections::HashMap;
-use std::env::{set_current_dir, current_dir};
-
-
-use crate::assign::cards::common_card::*;
 
 pub fn read_calibration_card(content:&String) -> HashMap<&str,String> {
     
-    ///set default values
+    //set default values
     
     let mut ref_mass_list = "".to_string();
     let mut cal_ppm_threshold = "(-3,3)".to_string();
