@@ -25,8 +25,8 @@ use crate::remote_host_ssh::*;
 struct Cli {
     #[command(subcommand)]
     command: Commands,
-    ///remote host of container environment; not currently implemented
-    #[clap(default_value="None", long)]
+    ///run on remote host; requires ssh public/private key pair for host and client; 
+    #[clap(default_value="None", short, long)]
     remote_host: Option<String>,
     /// CoreMS image for building CoreMS container
     #[arg(default_value="deweycw/corems-cli", long)]
@@ -107,12 +107,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
     let mut exec_script = String::from("/CoreMS/usrdata/corems_input.py");
 
     let mut docker = Docker::connect_with_socket_defaults().unwrap();
+    let mut run_local = true;
 
     if remote_host != "None" {
-        println!("remote host");
-        // establish ssh connection to remote host
-        // change docker to remote host docker 
-        // run remaining commands through ssh 
+        run_local = false;
     }
 
     
@@ -120,21 +118,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
     match &cli.command {
 
         Commands::Assign(input_file) => {
-            let input_file_arg: &Option<PathBuf> = &input_file.input_file;
-            content = std::fs::read_to_string(input_file_arg.as_deref().unwrap()).expect("could not read input (.in) file");
-            find_cards(&content);
-            load_container(&docker,  &corems_container, &db_container, &corems_image, &exec_script, &cwd).await?;
+            if run_local {
+                let input_file_arg: &PathBuf = &input_file.input_file.as_ref().unwrap();
+                content = std::fs::read_to_string(input_file_arg).expect("could not read input (.in) file");
+                find_cards(&content);
+                load_container(&docker,  &corems_container, &db_container, &corems_image, &exec_script, &cwd).await?;
+            } else {
+                sync_directory(&remote_host, &cwd).await?;
+                run_remote_host(&remote_host).await?;
+
+            }
            
         }
 
         Commands::Assign(script) => {
-            let script_arg: &Option<String> = &script.script;
-            if script_arg.as_deref().unwrap() != String::from("None") {
-                exec_script = String::from("/CoreMS/usrdata/");
-                exec_script.push_str(script_arg.as_deref().unwrap());
-                println!("{exec_script}");
-                load_container(&docker,  &corems_container, &db_container, &corems_image, &exec_script, &cwd).await?;
-            } 
+            if run_local {
+                let script_arg: &Option<String> = &script.script;
+                if script_arg.as_deref().unwrap() != String::from("None") {
+                    exec_script = String::from("/CoreMS/usrdata/");
+                    exec_script.push_str(script_arg.as_deref().unwrap());
+                    load_container(&docker,  &corems_container, &db_container, &corems_image, &exec_script, &cwd).await?;
+                } 
+            } else {
+
+            }
         }
 
 

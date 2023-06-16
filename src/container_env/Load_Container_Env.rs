@@ -12,9 +12,6 @@ use futures_util::{TryStreamExt, StreamExt};
 use std::collections::HashMap;
 
 pub async fn load_container(docker: &Docker, corems_container: &str, db_container: &str, corems_image: &str, exec_script: &str, cwd: &str) -> Result< (), Box<dyn std::error::Error + 'static>> {
-    
-    //println!("{:?}", &corems_container);
-    
 
     let mut filters = HashMap::new();
     filters.insert("name", vec![corems_container]);
@@ -23,10 +20,8 @@ pub async fn load_container(docker: &Docker, corems_container: &str, db_containe
         filters,
         ..Default::default()
     });
-
     let running_containers = docker.list_containers(options).await?;
     let x = running_containers.len();
-    println!("{:?}", &x);
     if x > 2 {
 
         let options = Some(RemoveContainerOptions{

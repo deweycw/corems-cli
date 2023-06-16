@@ -1,9 +1,9 @@
 services:
-  molformdb:
+  dewey-molformdb:
     image: postgres
     restart: always
     volumes:
-      - db-volume:/var/lib/postgresql/data
+      - dewey-db-volume:/var/lib/postgresql/data
     ports:
       - 5433:5432
     environment:
@@ -14,7 +14,16 @@ services:
       - POSTGRES_PASSWORD=coremsapppnnl
       - POSTGRES_DB=coremsapp
       - COREMS_DATABASE_URL="postgresql+psycopg2://coremsappdb:coremsapppnnl@molformdb:5432/coremsapp"
+      
+  dewey-corems-cl:
+    image: deweycw/corems-cli
+    restart: always
+    volumes:
+      - type: bind
+        source: ./rawfiles
+        target: /CoreMS/usrdata
+    tty: True
+        
 volumes:
-  db-volume:
+  dewey-db-volume:
 
-c
