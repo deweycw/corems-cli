@@ -20,8 +20,8 @@ pub fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>
         let mut is_radical = "False";
         let mut is_protonated = "True";
         let mut is_adduct = "False";
-        let mut oc_filter = "0";
-        let mut hc_filter = "0";
+        let oc_filter = "0";
+        let hc_filter = "0";
         let mut element_vec = Vec::new();
         let mut filters_vec = Vec::new();
         let mut element_return = false;
@@ -158,7 +158,6 @@ pub fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>
                     println!("yes");
                     let vec_f: Vec<&str> = card.split("FILTERS").collect();
                     let tempf = vec_f[1];
-                    let filters_grp = tempf.to_string();
                     for f in tempf.lines() {
                         
                         let vec_f2: Vec<&str> = f.split_whitespace().collect();
@@ -169,12 +168,12 @@ pub fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>
                             read_filters_card = false;
                             break;
                         } else if vec_f2.len() == 1{
-                            let mut filter_holder = vec_f2[0].to_owned();
+                            let filter_holder = vec_f2[0].to_owned();
                             let temp = vec_f2[0].to_owned();
                             filters_vec.push(temp);
                             filters_vec.push(filter_holder);
                         } else {
-                            let mut filter_holder = vec_f2[1].to_owned();
+                            let filter_holder = vec_f2[1].to_owned();
                             filters_vec.push(filter_holder);
                         }
                     }
@@ -183,7 +182,7 @@ pub fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>
             }
         }
 
-        let mut param_vec = vec![
+        let param_vec = vec![
             ("min_dbe",min_dbe),
             ("max_dbe",max_dbe),
             ("ion_charge",ion_charge),
@@ -199,8 +198,8 @@ pub fn read_search_card<'a>(content:&'a String) -> HashMap<i32, AssignParams<'a>
         let mut n: i32 = 0;
 
         for e in element_vec {
-            let mut min = e[1].to_string();
-            let mut max = e[2].to_string();
+            let min = e[1].to_string();
+            let max = e[2].to_string();
             let mut element_range = "(".to_string();
             element_range.push_str(&min);
             element_range.push_str(",");

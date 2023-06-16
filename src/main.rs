@@ -11,15 +11,16 @@ use clap::{Parser, Subcommand, Args, ValueEnum};
 mod assign;
 use crate::assign::find_cards::*;
 mod container_env;
-use crate::container_env::Load_Container_Env::*; 
+use crate::container_env::load_container_env::*; 
+mod remote_host_ssh;
+use crate::remote_host_ssh::*;
 
-use futures::executor::block_on;
 
 #[derive(Parser)]
 #[command(name = "corems-cli")]
 #[command(author = "Christian Dewey <dewey.christian@gmail.com>")]
-#[command(version = "beta")]
-#[command(about = "command line tool for formula assignments with CoreMS",long_about = "This tool leverages CoreMS (https://github.com/EMSL-Computing/CoreMS; Yuri E. Corilo, William R. Kew, Lee Ann McCue (2021, March 27). EMSL-Computing/CoreMS: CoreMS 1.0.0 (Version v1.0.0), as developed on Github. Zenodo. http://doi.org/10.5281/zenodo.4641553), a comprehensive Python framework for analysis of high resolution ESI mass spectrometry data. The tool creates a containerized deployment of CoreMS and facilitates communication between the user's local system and the CoreMS container. Assignment parameters are defined in a text-based input file or a user-provided Python script. The user runs the tool within a directory containing the raw MS data files (.RAW), the input file or Python script, and a peak list for calibration. A .csv file with assignment results is generated and saved within the directory containing the raw files.")]
+#[command(version = "0.1.0-beta")]
+#[command(about = "command line tool for formula assignments with CoreMS",long_about = "\n\nThis tool leverages CoreMS (https://github.com/EMSL-Computing/CoreMS; Yuri E. Corilo, William R. Kew, Lee Ann McCue (2021, March 27). EMSL-Computing/CoreMS: CoreMS 1.0.0 (Version v1.0.0), as developed on Github. Zenodo. http://doi.org/10.5281/zenodo.4641553), a comprehensive Python framework for analysis of high resolution ESI mass spectrometry data. The tool creates a containerized deployment of CoreMS and facilitates communication between the user's local system and the CoreMS container. Assignment parameters are defined in a text-based input file or a user-provided Python script. The user runs the tool within a directory containing the raw MS data files (.RAW), the input file or Python script, and a peak list for calibration. A .csv file with assignment results is generated and saved within the directory containing the raw files.")]
 #[command(propagate_version = true)]
 struct Cli {
     #[command(subcommand)]
@@ -33,10 +34,10 @@ struct Cli {
     /// CoreMS container to use for assignments
     #[arg(default_value="corems-cli", long)]
     corems_container: Option<String>,
-    /// Database container to pair with container
+    /// Database (Postgres) container for assignment database 
     #[arg(default_value="corems-cli-molformdb-1", long)]
     db_container: Option<String>,
-    /// Database volume to pair with container
+    /// Database volume holding assignments
     #[arg(default_value="corems-cli_db-volume", long)]
     db_volume: Option<String>,
 
@@ -89,6 +90,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
 
     let cli = Cli::parse();
 
+    let remote_host_arg: &Option<String> = &cli.remote_host;
+    let remote_host = remote_host_arg.as_ref().unwrap();
+
     let corems_container_arg: &Option<String> = &cli.corems_container;
     let db_container_arg: &Option<String> = &cli.db_container;
     let corems_image_arg: &Option<String> = &cli.corems_image;
@@ -102,7 +106,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
     let mut content = String::from("empty");
     let mut exec_script = String::from("/CoreMS/usrdata/corems_input.py");
 
-    let docker = Docker::connect_with_socket_defaults().unwrap();
+    let mut docker = Docker::connect_with_socket_defaults().unwrap();
+
+    if remote_host != "None" {
+        println!("remote host");
+        // establish ssh connection to remote host
+        // change docker to remote host docker 
+        // run remaining commands through ssh 
+    }
 
     
 

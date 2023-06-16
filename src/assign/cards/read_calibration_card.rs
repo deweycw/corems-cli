@@ -4,10 +4,9 @@ pub fn read_calibration_card(content:&String) -> HashMap<&str,String> {
     
     //set default values
     
-    let mut ref_mass_list = "".to_string();
-    let mut cal_ppm_threshold = "(-3,3)".to_string();
+    let ref_mass_list = "".to_string();
+    let cal_ppm_threshold = "(-3,3)".to_string();
     let mut cal_snr_threshold = "3".to_string();
-    let mut holder = "";
     let mut min_error = "-3";
     let mut max_error = "3";
     let mut string_bldr: Vec<String> = Vec::new();
@@ -78,8 +77,8 @@ pub fn read_calibration_card(content:&String) -> HashMap<&str,String> {
 
     
 
-    let mut min = string_bldr[0].to_string();
-    let mut max = string_bldr[1].to_string();
+    let min = string_bldr[0].to_string();
+    let max = string_bldr[1].to_string();
     let mut cal_range = "(".to_string();
     cal_range.push_str(&min);
     cal_range.push_str(",");
@@ -91,14 +90,14 @@ pub fn read_calibration_card(content:&String) -> HashMap<&str,String> {
     calfile_bldr.push_str(calfile);
     calfile_bldr.push_str("'");
 
-    let mut param_vec = vec![
+    let param_vec = vec![
         ("calib_ppm_error_threshold",cal_range),
         ("calib_snr_thrshold",cal_snr_threshold),
         ("ref_mass_list",calfile_bldr),
     ];
     
 
-    let mut cal_params_hash: HashMap<_, _> = param_vec.into_iter().collect();
+    let cal_params_hash: HashMap<_, _> = param_vec.into_iter().collect();
 
     return cal_params_hash;
 

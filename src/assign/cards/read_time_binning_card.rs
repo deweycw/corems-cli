@@ -32,13 +32,13 @@ pub fn read_time_binning_card(content:&String) -> HashMap<&str,&str> {
     }
 
 
-    let mut param_vec = vec![
+    let param_vec = vec![
         ("time_min",time_min),
         ("time_max",time_max),
         ("interval",interval),
     ];
     
-    let mut time_params_hash: HashMap<_, _> = param_vec.into_iter().collect();
+    let time_params_hash: HashMap<_, _> = param_vec.into_iter().collect();
 
     return time_params_hash;
 

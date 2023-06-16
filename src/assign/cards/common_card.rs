@@ -41,7 +41,6 @@ pub struct CalValue{
     pub value: String,
 }
 
-pub type Calibtration = HashMap<CalIndex, CalValue>;
 
 pub fn make_param_hash<'a>(param_vector: &Vec<(&'a str, &'a str)>) -> Parameters<'a> {
 

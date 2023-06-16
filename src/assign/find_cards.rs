@@ -47,7 +47,7 @@ pub fn find_cards<'a>(content:&'a String) {
     }
 
     
-    let mut global_params: common_card::Parameters<'a> = read_global_settings_card::read_global_settings_card(&content);
+    let global_params: common_card::Parameters<'a> = read_global_settings_card::read_global_settings_card(&content);
     let mut assign_params_hash = read_search_card::read_search_card(&content);
     let first_search = assign_params_hash.get(&1).unwrap();
     let first_search_params = &first_search.params;

@@ -112,7 +112,7 @@ pub fn read_global_settings_card<'a>(content:&'a String) -> Parameters<'a> {
         }
     }
 
-    let mut param_vec = vec![
+    let param_vec = vec![
         ("error_method",error_method),
         ("min_ppm_error",min_ppm_error),
         ("max_ppm_error",max_ppm_error),
