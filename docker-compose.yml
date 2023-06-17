@@ -20,7 +20,7 @@ services:
     restart: always
     volumes:
       - type: bind
-        source: ./rawfiles
+        source: ./
         target: /CoreMS/usrdata
     tty: True
         
