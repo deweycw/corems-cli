@@ -35,7 +35,7 @@ pub async fn sync_directory(remote_host: &str, cwd: &str) -> Result< (),Box<dyn 
 
 
 pub async fn run_remote_host(remote_host: &str) -> Result< (), Box<dyn std::error::Error + 'static>> {
-    println!("\n...running assignment - this may take some time...");
+    println!("\n...running assignment - this may take some time...")
     let str_split: Vec<&str> = remote_host.split("@").collect();
     let user_home = str_split[0];
 
