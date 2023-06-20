@@ -1,26 +1,29 @@
 use openssh::{Session, KnownHosts, Stdio};
 use std::process::{Command};
 use std::io::{self, Write};
-use std::{
-    thread,
-    time::{Duration, Instant},
-};
+use tokio::{task, time};
+use std::time::Duration;
+
 
 pub async fn sync_directory(remote_host: &str, cwd: &str) -> Result< (),Box<dyn std::error::Error + 'static>>{
     let mut remote_dir = String::from(remote_host);
     let remote_dir_root: &str = ":/cygdrive/c/users/";
+    //let remote_dir_root: &str = ":/mnt/c/users/";
     remote_dir.push_str(remote_dir_root);
     let str_split: Vec<&str> = remote_host.split("@").collect();
     let user_home = str_split[0];
     remote_dir.push_str(user_home);
-    remote_dir.push_str("/.corems_cli_transfer/");
+    remote_dir.push_str("/Desktop/corems/");
 
-    println!("\n...Starting data transfer to {}\n", remote_host);
+    println!("\n...starting data transfer to {}\n", remote_dir);
 
     let rsync_cmnd = Command::new("rsync")
         .arg("-aP")
+        .arg("-e")
+        .arg("ssh")
         .arg("/Users/christiandewey/test-sync/data-temp/")
         .arg(remote_dir)
+        //.arg("--rsync-path='C:\\ProgramData\\chocolatey\\bin\\rsync.exe'")
         .output()
         .expect("rsync command failed to start");
 
@@ -32,60 +35,78 @@ pub async fn sync_directory(remote_host: &str, cwd: &str) -> Result< (),Box<dyn 
 
 
 pub async fn run_remote_host(remote_host: &str) -> Result< (), Box<dyn std::error::Error + 'static>> {
-
-    let mut docker_compose = String::from("\\Users\\");
+    println!("\n...running assignment - this may take some time...");
     let str_split: Vec<&str> = remote_host.split("@").collect();
     let user_home = str_split[0];
+
+    let mut docker_compose = String::from("/Users/");
     docker_compose.push_str(user_home);
-    docker_compose.push_str("\\.corems_cli_transfer\\");
-    docker_compose.push_str("docker-compose.yml\\");
+    docker_compose.push_str("/.corems_cli_transfer/docker-compose.yml");
+
+    let mut log_out = String::from("/Users/");
+    log_out.push_str(user_home); 
+    log_out.push_str("/.corems_cli_transfer/log.out");
+
+    let session = Session::connect_mux(remote_host, KnownHosts::Accept).await?;
+
+    //let mut move_data = &session.command("wsl.exe")
+        //.arg("rsync")
+//let mut move_data = &session.command("rsync")
+ //       .arg("-aP")
+ //       .arg(&data_c_path)
+ //       .arg(&wsl_home)
+ //       .output().await?;
+ //   io::stdout().write_all(&move_data.stdout).unwrap();
+ //   io::stderr().write_all(&move_data.stderr).unwrap();
+
+    exec_docker(&session, &remote_host, &docker_compose).await?;
+
+    //let session2 = Session::connect_mux(remote_host, KnownHosts::Accept).await?;
+
+    //loop{
+        //print_out(&session2,&remote_host).await?;
+    //}
 
 
-    let mut log_file = String::from("\\Users\\");
-    let str_split: Vec<&str> = remote_host.split("@").collect();
-    let user_home = str_split[0];
-    log_file.push_str(user_home);
-    log_file.push_str("\\.corems_cli_transfer\\");
-    log_file.push_str("log.txt");
-    println!("{}",log_file);
 
-    let session = Session::connect_mux("bioinfo-pc", KnownHosts::Accept).await?;
-    
-    exec_docker(&session).await?;
+    async fn exec_docker(session: &Session, remote_host: &str, docker_compose: &str) -> Result< (), Box<dyn std::error::Error + 'static>>{ 
 
-    loop{
-        print_out(&session).await?;
-    }
-
-    async fn print_out(session: &Session) -> Result< (), Box<dyn std::error::Error + 'static>>{
-        let mut cmdline = session.command("powershell.exe")
-        .arg("-Command")
-        .raw_arg("\"& Get-Content -Path \".logfile.txt\" -Tail 1\"")
-        .output().await?;
-        io::stdout().write_all(&cmdline.stdout).unwrap();
-        io::stderr().write_all(&cmdline.stderr).unwrap();
-        Ok(())
-
-    }
-    
-    async fn exec_docker(session: &Session) -> Result< (), Box<dyn std::error::Error + 'static>>{
-        println!("\n...Checking running containers...\n") ;
-        let mut cmdline = session.command("powershell.exe")
-            .arg("-Command")
-            .raw_arg("\"& docker container ls > .logfile.txt | cat .logfile.txt\"")
+        //let mut docker_compose_cmd = session.command("docker")
+          //  .args(["compose","-f",docker_compose, "up", "-d"])
+          //  //.args(["sudo","docker","compose","-f",&docker_compose, "up","-d", "'>", &log_out_p])
+          //  .spawn().await?;
+        
+        let mut docker_exec_cmd = session.command("docker")
+            .args(["exec","corems-dewey-1","python3","-u","/CoreMS/usrdata/corems_input.py"])
+            //.args(["sudo","docker","compose","-f",&docker_compose, "up","-d", "'>", &log_out_p])
             .output().await?;
-        io::stdout().write_all(&cmdline.stdout).unwrap();
-        io::stderr().write_all(&cmdline.stderr).unwrap();
 
-        //println!("\n...Composing containers...\n");
-        let mut powershell = session.command("powershell.exe")
-            .arg("-Command")
-            .raw_arg("\"& docker compose -f .docker-compose.yml up -d > .logfile.txt | cat .logfile.txt\"")
-            .output()
-            .await?;
-        io::stdout().write_all(&powershell.stdout).unwrap();
-        io::stderr().write_all(&powershell.stderr).unwrap();
+        io::stdout().write_all(&docker_exec_cmd.stdout).unwrap();
+        io::stderr().write_all(&docker_exec_cmd.stderr).unwrap();
+
         Ok(())
     }
     Ok(())
 }
+
+
+pub async fn print_out(remote_host: &str) -> Result< (), Box<dyn std::error::Error + 'static>>{
+
+    let session = Session::connect_mux(remote_host, KnownHosts::Accept).await?;
+    //let mut interval = time::interval(Duration::from_millis(10));
+
+    //interval.tick().await;
+
+    let mut print_docker_logs = session.command("docker")
+        .args(["logs", "--tail","all","corems-dewey-1"])
+        .output().await?;
+
+    io::stdout().write_all(&print_docker_logs.stdout).unwrap();
+    io::stderr().write_all(&print_docker_logs.stderr).unwrap();
+    
+   Ok(())     
+   //-> Result< (), Box<dyn std::marker::Send + 'static>>
+}
+
+
+

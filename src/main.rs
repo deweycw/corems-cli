@@ -15,6 +15,8 @@ use crate::container_env::load_container_env::*;
 mod remote_host_ssh;
 use crate::remote_host_ssh::*;
 
+use std::time::Duration;
+
 
 #[derive(Parser)]
 #[command(name = "corems-cli")]
@@ -125,7 +127,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
                 load_container(&docker,  &corems_container, &db_container, &corems_image, &exec_script, &cwd).await?;
             } else {
                 sync_directory(&remote_host, &cwd).await?;
+
                 run_remote_host(&remote_host).await?;
+
+                print_out(&remote_host).await?;
+
+                println!("\nFinished sucessfully!");
 
             }
            
@@ -139,9 +146,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
                     exec_script.push_str(script_arg.as_deref().unwrap());
                     load_container(&docker,  &corems_container, &db_container, &corems_image, &exec_script, &cwd).await?;
                 } 
-            } else {
-
-            }
+            } 
         }
 
 

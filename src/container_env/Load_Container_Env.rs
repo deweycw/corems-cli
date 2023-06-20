@@ -92,7 +92,7 @@ pub async fn load_container(docker: &Docker, corems_container: &str, db_containe
         )
         .await?
         .id;
-    println!("{:?}", &corems_id);
+    
     docker.start_container::<String>(&corems_id, None).await?;
 
 
